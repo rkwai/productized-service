@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ontology Value Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Ontology Value Dashboard</p>
+        <h1 id="company-name">Client Value Dashboard</h1>
+        <p id="primary-objective" class="objective"></p>
+      </div>
+      <div class="meta">
+        <div>
+          <span class="label">FDE Lead</span>
+          <strong id="fde-lead"></strong>
+        </div>
+        <div>
+          <span class="label">Deployment timeline</span>
+          <strong id="deployment-timeline"></strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <h2>Navigate</h2>
+        <nav>
+          <a href="#value-summary">Business Value</a>
+          <a href="#client-metadata">Client metadata</a>
+          <a href="#semantic-layer">Semantic layer</a>
+          <a href="#kinetic-layer">Kinetic layer</a>
+          <a href="#data-integration">Data integration</a>
+          <a href="#json-export">JSON export</a>
+        </nav>
+      </aside>
+
+      <section class="content">
+        <section id="value-summary" class="card">
+          <div class="card-header">
+            <h2>Business value focus</h2>
+            <p>Keep renewal, expansion, and outcome delivery at the center of every update.</p>
+          </div>
+          <div class="summary-grid" id="summary-grid"></div>
+          <div class="value-actions" id="value-actions"></div>
+        </section>
+
+        <section id="client-metadata" class="card"></section>
+        <section id="semantic-layer" class="card"></section>
+        <section id="kinetic-layer" class="card"></section>
+        <section id="data-integration" class="card"></section>
+
+        <section id="json-export" class="card">
+          <div class="card-header">
+            <h2>Current JSON</h2>
+            <p>Live view of the edited dataset.</p>
+          </div>
+          <textarea id="json-output" rows="18" readonly></textarea>
+          <div class="button-row">
+            <button id="download-json" class="primary">Download JSON</button>
+            <button id="reset-data" class="ghost">Reset changes</button>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="data.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
