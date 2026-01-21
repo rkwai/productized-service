@@ -14,6 +14,10 @@ python -m http.server 8000
 - Arrays of objects are displayed as cards with **Add** and **Remove** controls.
 - The **Current JSON** panel updates live.
 
+## Navigating the dashboard
+- Use the left navigation rail to jump between value summaries, ontology layers, and the JSON export.
+- The hero header highlights the primary objective plus key program metadata for quick executive reviews.
+
 ## Exporting updates
 Use **Download JSON** to save the edited dataset. This is the canonical payload for future backend integration or ingestion into an ontology system.
 
