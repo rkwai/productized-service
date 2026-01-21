@@ -1,22 +1,22 @@
 const { test, expect } = require("@playwright/test");
 
-test("dashboard loads and reflects edits in JSON", async ({ page }) => {
+test("cockpit loads and reflects edits in JSON", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { level: 1, name: "Client Value Dashboard" })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2, name: "Business value focus" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Executive Overview" })).toBeVisible();
 
-  const summaryTiles = page.locator("#summary-grid .summary-tile");
-  await expect(summaryTiles).toHaveCount(5);
+  await page.goto("/#/accounts");
 
-  const companyField = page
-    .locator("#client-metadata .field-group")
-    .filter({ hasText: "company name" })
+  const accountField = page
+    .locator("[data-page='accounts'] .field-group")
+    .filter({ hasText: "account name" })
+    .first()
     .locator("input");
 
-  await companyField.fill("Acme Analytics");
-  await expect(page.getByRole("heading", { level: 1, name: "Acme Analytics" })).toBeVisible();
+  await accountField.fill("Acme Analytics");
 
+  await page.goto("/#/json-export");
   const jsonOutput = page.locator("#json-output");
-  await expect(jsonOutput).toHaveValue(/"company_name": "Acme Analytics"/);
+  await expect(jsonOutput).toHaveValue(/"account_name": "Acme Analytics"/);
 });

@@ -1,13 +1,13 @@
-# Ontology Value Dashboard UI
+# Ontology Decision Cockpit UI
 
-A lightweight, dependency-free dashboard UI for viewing and editing a Palantir-style ontology and Forward Deployed Engineer (FDE) findings. The UI is designed to keep business value front-and-center while providing full editability of every field in the dataset.
+A configuration-driven, dependency-free decision cockpit for viewing and editing a Palantir-style ontology plus live operational data. The UI is built for business stakeholders to steer renewal readiness, delivery reliability, and measurable value realization.
 
 ## Why this exists
-This prototype helps teams translate FDE findings into an operational dashboard that:
-- Highlights client value realization and renewal risk drivers.
-- Keeps delivery reliability, outcomes, and KPIs tied to each other.
-- Makes it easy to iterate on ontology definitions and action playbooks.
-- Presents insights in a polished, executive-ready layout inspired by modern Vercel-style dashboards.
+This prototype helps teams translate ontology definitions and field data into an operational cockpit that:
+- Surfaces renewal and expansion readiness signals with explainability.
+- Connects delivery reliability to outcomes and KPIs.
+- Turns insights into actions with logged workflows.
+- Keeps ontology configuration editable and versioned.
 
 ## Quick start
 This is a static web app. Serve it with any local web server.
@@ -39,20 +39,22 @@ npm test
 ## Project structure
 - `index.html` - App shell and layout.
 - `styles.css` - Visual design system and layout.
-- `data.js` - Source dataset (FDE findings + ontology template).
-- `app.js` - Rendering and edit logic.
+- `docs/ontology-map.json` - Authoritative configuration (client metadata, semantic + kinetic layers, data integration).
+- `seed-data.js` - Seeded ontology instances + links.
+- `data.js` - Fallback template data (legacy).
+- `storage.js` - Local persistence adapter.
+- `app.js` - Rendering engine, routing, and state management.
 - `docs/PLAN.md` - Delivery plan and milestones.
 - `docs/ARCHITECTURE.md` - UI structure and state model.
-- `docs/USER_GUIDE.md` - How to use the dashboard.
+- `docs/USER_GUIDE.md` - How to use the cockpit.
 
 ## Editing data
-- All fields are editable in-place.
-- Arrays of primitives use newline-separated values.
-- Arrays of objects are shown as cards with add/remove actions.
+- All fields are editable in-place (Admin/Operator).
+- Viewers can browse but cannot edit.
 - The **Current JSON** panel reflects live edits and can be downloaded.
 
 ## Business value focus
-The UI keeps value signals visible (objectives, outcomes, KPI progress, risks) to support renewal and expansion conversations. The new visual hierarchy surfaces critical metadata and actions up front for business stakeholders.
+The cockpit keeps value signals visible (health, risk, outcome progress) with explainability panels to support renewal and expansion conversations.
 
 ## Roadmap
 See `docs/PLAN.md` for the full plan and next steps.
