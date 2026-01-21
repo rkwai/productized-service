@@ -7,6 +7,7 @@ This prototype helps teams translate FDE findings into an operational dashboard 
 - Highlights client value realization and renewal risk drivers.
 - Keeps delivery reliability, outcomes, and KPIs tied to each other.
 - Makes it easy to iterate on ontology definitions and action playbooks.
+- Presents insights in a polished, executive-ready layout inspired by modern Vercel-style dashboards.
 
 ## Quick start
 This is a static web app. Serve it with any local web server.
@@ -37,7 +38,7 @@ npm test
 
 ## Project structure
 - `index.html` - App shell and layout.
-- `styles.css` - Visual design and layout.
+- `styles.css` - Visual design system and layout.
 - `data.js` - Source dataset (FDE findings + ontology template).
 - `app.js` - Rendering and edit logic.
 - `docs/PLAN.md` - Delivery plan and milestones.
@@ -51,7 +52,7 @@ npm test
 - The **Current JSON** panel reflects live edits and can be downloaded.
 
 ## Business value focus
-The UI keeps value signals visible (objectives, outcomes, KPI progress, risks) to support renewal and expansion conversations.
+The UI keeps value signals visible (objectives, outcomes, KPI progress, risks) to support renewal and expansion conversations. The new visual hierarchy surfaces critical metadata and actions up front for business stakeholders.
 
 ## Roadmap
 See `docs/PLAN.md` for the full plan and next steps.
