@@ -1,0 +1,13 @@
+{
+  "name": "ontology-value-dashboard",
+  "version": "1.0.0",
+  "description": "Static dashboard for ontology value tracking.",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
+  }
+}
