@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ontology Value Dashboard</title>
+    <title>Ontology Decision Cockpit</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -11,15 +11,15 @@
       <header class="app-header">
         <div class="header-top">
           <div class="brand">
-            <span class="logo">OV</span>
+            <span class="logo">OD</span>
             <div>
-              <p class="eyebrow">Ontology Value Dashboard</p>
+              <p class="eyebrow">Ontology Decision Cockpit</p>
               <h1 id="company-name">Client Value Dashboard</h1>
             </div>
           </div>
           <div class="header-status">
-            <span class="status-pill">Live dataset</span>
-            <span class="status-pill subtle">Auto-saved</span>
+            <span id="status-badge" class="status-pill">Synced</span>
+            <span id="save-indicator" class="status-pill subtle">Changes auto-save locally</span>
           </div>
         </div>
         <div class="header-body">
@@ -34,44 +34,55 @@
               <strong id="deployment-timeline"></strong>
             </div>
           </div>
+          <div class="meta">
+            <div class="meta-card">
+              <span class="label">Role</span>
+              <select id="role-select" data-allow-viewer="true">
+                <option value="Admin">Admin</option>
+                <option value="Operator">Operator</option>
+                <option value="Viewer">Viewer</option>
+              </select>
+            </div>
+          </div>
         </div>
       </header>
 
       <main class="layout">
         <aside class="sidebar">
           <div class="sidebar-header">
-            <h2>Navigate</h2>
-            <p>Jump to insights and edit zones.</p>
+            <h2>Decision cockpit</h2>
+            <p>Navigate by business outcomes.</p>
           </div>
           <nav>
-            <a href="#value-summary">Business Value</a>
-            <a href="#client-metadata">Client metadata</a>
-            <a href="#semantic-layer">Semantic layer</a>
-            <a href="#kinetic-layer">Kinetic layer</a>
-            <a href="#data-integration">Data integration</a>
-            <a href="#json-export">JSON export</a>
+            <a href="#/overview">Executive Overview</a>
+            <a href="#/accounts">Accounts</a>
+            <a href="#/engagements">Engagements</a>
+            <a href="#/outcomes">Outcomes & KPIs</a>
+            <a href="#/risks">Risks & Issues</a>
+            <a href="#/actions">Action Center</a>
+            <a href="#/ontology">Ontology Studio</a>
+            <a href="#/data-integration">Data Integration</a>
+            <a href="#/audit">Audit & Activity</a>
+            <a href="#/json-export">JSON Export</a>
           </nav>
         </aside>
 
         <section class="content">
-          <section id="value-summary" class="card">
-            <div class="card-header">
-              <h2>Business value focus</h2>
-              <p>Keep renewal, expansion, and outcome delivery at the center of every update.</p>
-            </div>
-            <div class="summary-grid" id="summary-grid"></div>
-            <div class="value-actions" id="value-actions"></div>
-          </section>
-
-          <section id="client-metadata" class="card"></section>
-          <section id="semantic-layer" class="card"></section>
-          <section id="kinetic-layer" class="card"></section>
-          <section id="data-integration" class="card"></section>
+          <section data-page="overview" class="page active"></section>
+          <section data-page="accounts" class="page"></section>
+          <section data-page="account-detail" class="page"></section>
+          <section data-page="engagements" class="page"></section>
+          <section data-page="outcomes" class="page"></section>
+          <section data-page="risks" class="page"></section>
+          <section data-page="actions" class="page"></section>
+          <section data-page="ontology" class="page"></section>
+          <section data-page="data-integration" class="page"></section>
+          <section data-page="audit" class="page"></section>
 
           <section id="json-export" class="card">
             <div class="card-header">
               <h2>Current JSON</h2>
-              <p>Live view of the edited dataset.</p>
+              <p>Configuration, instances, computed values, and action logs.</p>
             </div>
             <textarea id="json-output" rows="18" readonly></textarea>
             <div class="button-row">
@@ -84,6 +95,8 @@
     </div>
 
     <script type="module" src="data.js"></script>
+    <script type="module" src="seed-data.js"></script>
+    <script type="module" src="storage.js"></script>
     <script type="module" src="app.js"></script>
   </body>
 </html>
