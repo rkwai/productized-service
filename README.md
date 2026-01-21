@@ -17,6 +17,24 @@ python -m http.server 8000
 
 Then open `http://localhost:8000` in your browser.
 
+## Deploying
+Run the built-in Node server for deployment targets that expect a start command:
+
+```bash
+npm install
+npm start
+```
+
+The server listens on `PORT` (default: `3000`). A Dockerfile is included for container-based deployments.
+
+## Tests
+Install dependencies and run the happy-path Playwright checks:
+
+```bash
+npm install
+npm test
+```
+
 ## Project structure
 - `index.html` - App shell and layout.
 - `styles.css` - Visual design and layout.
