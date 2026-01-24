@@ -15,6 +15,7 @@ import {
   generateAuditEntry,
 } from "@/lib/dashboard";
 import { clearState } from "@/lib/storage";
+import { NAV_ITEMS, readRouteFromHash, resolveActivePage } from "@/lib/routing";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,24 +36,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const ROUTES = [
-  "overview",
-  "accounts",
-  "engagements",
-  "outcomes",
-  "risks",
-  "actions",
-  "ontology",
-  "data-integration",
-  "audit",
-  "json-export",
-];
-
-const readRoute = () => {
-  const hash = window.location.hash || "#/overview";
-  const [page, id] = hash.replace("#/", "").split("/");
-  return { page: ROUTES.includes(page) ? page : "overview", id };
-};
+const readRoute = () => readRouteFromHash(window.location.hash);
 
 const useHashRoute = () => {
   const [route, setRoute] = useState(readRoute);
@@ -440,19 +424,28 @@ const App = () => {
     URL.revokeObjectURL(url);
   };
 
-  const activePage = useMemo(() => {
-    if (route.page === "accounts" && route.id) {
-      return "account-detail";
+  const accounts = state?.instances.client_account || [];
+  const accountDetail = useMemo(
+    () => (route.id ? accounts.find((acc) => acc.account_id === route.id) ?? null : null),
+    [accounts, route.id]
+  );
+  const activePage = useMemo(
+    () => resolveActivePage({ route, accountDetail }),
+    [accountDetail, route]
+  );
+
+  useEffect(() => {
+    if (!state) return;
+    if (route.page === "accounts" && route.id && !accountDetail) {
+      window.location.hash = "#/accounts";
     }
-    return route.page;
-  }, [route]);
+  }, [accountDetail, route.id, route.page, state]);
 
   if (!state) {
     return <div className="loading">Loading dashboard…</div>;
   }
 
   const isViewer = state.role === "Viewer";
-  const accounts = state.instances.client_account || [];
   const attentionAccounts = accounts
     .map((account) => ({
       account,
@@ -486,10 +479,6 @@ const App = () => {
   const onTrackOutcomes = (state.instances.outcome || []).filter(
     (outcome) => (getDerived(state, "outcome", outcome.outcome_id, "progress_pct")?.value || 0) >= 0.6
   ).length;
-
-  const accountDetail = route.id
-    ? accounts.find((acc) => acc.account_id === route.id)
-    : null;
 
   const engagements = state.instances.consulting_engagement || [];
   const outcomes = state.instances.outcome || [];
@@ -563,22 +552,17 @@ const App = () => {
             <p>Navigate by business outcomes.</p>
           </div>
           <nav>
-            <a href="#/overview">Executive Overview</a>
-            <a href="#/accounts">Accounts</a>
-            <a href="#/engagements">Engagements</a>
-            <a href="#/outcomes">Outcomes & KPIs</a>
-            <a href="#/risks">Risks & Issues</a>
-            <a href="#/actions">Action Center</a>
-            <a href="#/ontology">Ontology Studio</a>
-            <a href="#/data-integration">Data Integration</a>
-            <a href="#/audit">Audit & Activity</a>
-            <a href="#/json-export">JSON Export</a>
+            {NAV_ITEMS.map((item) => (
+              <a key={item.path} href={`#/${item.path}`}>
+                {item.label}
+              </a>
+            ))}
           </nav>
         </aside>
 
         <section className="content">
           {activePage === "overview" && (
-            <section className="page active">
+            <section className="page active" data-page="overview">
               <PageHeader
                 title="Executive Overview"
                 description="Portfolio-level signals for renewal readiness, delivery reliability, and value realization."
@@ -613,7 +597,7 @@ const App = () => {
           )}
 
           {activePage === "accounts" && (
-            <section className="page active">
+            <section className="page active" data-page="accounts">
               <PageHeader
                 title="Accounts"
                 description="Monitor renewal readiness and value realization across the portfolio."
@@ -655,7 +639,7 @@ const App = () => {
           )}
 
           {activePage === "account-detail" && (
-            <section className="page active">
+            <section className="page active" data-page="account-detail">
               {accountDetail ? (
                 <>
                   <PageHeader
@@ -763,7 +747,7 @@ const App = () => {
           )}
 
           {activePage === "engagements" && (
-            <section className="page active">
+            <section className="page active" data-page="engagements">
               <PageHeader
                 title="Consulting engagements"
                 description="Active engagements with scope, owners, and renewal markers."
@@ -779,7 +763,7 @@ const App = () => {
           )}
 
           {activePage === "outcomes" && (
-            <section className="page active">
+            <section className="page active" data-page="outcomes">
               <PageHeader title="Outcomes & KPIs" description="Track measurable value realization and KPI progress." />
               <div className="card-grid">
                 {outcomes.map((outcome) => {
@@ -844,7 +828,7 @@ const App = () => {
           )}
 
           {activePage === "risks" && (
-            <section className="page active">
+            <section className="page active" data-page="risks">
               <PageHeader title="Risks & Issues" description="Surface threats to delivery timelines and outcomes." />
               <ObjectListPanel
                 state={state}
@@ -857,7 +841,7 @@ const App = () => {
           )}
 
           {activePage === "actions" && (
-            <section className="page active">
+            <section className="page active" data-page="actions">
               <PageHeader title="Action Center" description="Execute workflows and document interventions." />
               <div className="panel">
                 <h3>Launch action</h3>
@@ -914,7 +898,7 @@ const App = () => {
           )}
 
           {activePage === "ontology" && (
-            <section className="page active">
+            <section className="page active" data-page="ontology">
               <PageHeader
                 title="Ontology Studio"
                 description="Edit the configuration, validate, and version the ontology definition."
@@ -999,7 +983,7 @@ const App = () => {
           )}
 
           {activePage === "data-integration" && (
-            <section className="page active">
+            <section className="page active" data-page="data-integration">
               <PageHeader
                 title="Data Integration"
                 description="Source systems and pipelines that hydrate the ontology."
@@ -1020,7 +1004,7 @@ const App = () => {
           )}
 
           {activePage === "audit" && (
-            <section className="page active">
+            <section className="page active" data-page="audit">
               <PageHeader title="Audit & Activity" description="Track every edit, workflow, and config update." />
               <div className="card-grid">
                 {state.audit_log.slice(0, 12).map((entry) => (
@@ -1040,12 +1024,13 @@ const App = () => {
           )}
 
           {activePage === "json-export" && (
-            <section className="card">
+            <section className="card" data-page="json-export">
               <div className="card-header">
                 <h2>Current JSON</h2>
                 <p>Configuration, instances, computed values, and action logs.</p>
               </div>
               <Textarea
+                id="json-output"
                 rows={18}
                 value={JSON.stringify(
                   {
