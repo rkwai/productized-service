@@ -1,21 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   color-scheme: light;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  color: #0f172a;
-  background-color: #f8fafc;
-  --bg: #f8fafc;
-  --card: #ffffff;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --muted: #64748b;
-  --muted-foreground: #94a3b8;
-  --primary: #0f172a;
-  --primary-foreground: #f8fafc;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  --background: 0 0% 100%;
+  --foreground: 222.2 47.4% 11.2%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 47.4% 11.2%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 47.4% 11.2%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 47.4% 11.2%;
+  --radius: 0.65rem;
+  --bg: hsl(var(--background));
+  --text: hsl(var(--foreground));
+  --card-surface: hsl(var(--card));
+  --border-color: hsl(var(--border));
+  --muted-text: hsl(var(--muted-foreground));
   --success: #16a34a;
   --warning: #f97316;
-  --danger: #ef4444;
+  --danger: hsl(var(--destructive));
   --shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.08);
   --radius-lg: 16px;
   --radius-md: 12px;
@@ -31,6 +48,7 @@ body {
   line-height: 1.6;
   background: var(--bg);
   color: var(--text);
+  @apply bg-background text-foreground;
 }
 
 .app-shell {
@@ -44,9 +62,9 @@ body {
   gap: 1.75rem;
   padding: 2rem;
   border-radius: var(--radius-lg);
-  background: var(--card);
+  background: var(--card-surface);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   box-shadow: var(--shadow);
 }
 
@@ -70,8 +88,8 @@ body {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: var(--secondary);
-  color: var(--secondary-foreground);
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
   font-weight: 700;
   letter-spacing: 0.05em;
 }
@@ -80,31 +98,6 @@ body {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-
-.status-pill.warning {
-  background: #ffedd5;
-  color: #9a3412;
-  border-color: #fed7aa;
-}
-
-.status-pill.subtle {
-  background: var(--secondary);
-  color: var(--muted);
-  border-color: var(--border);
 }
 
 .header-body {
@@ -119,7 +112,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.28em;
   font-size: 0.7rem;
-  color: var(--muted);
+  color: var(--muted-text);
   margin-bottom: 0.4rem;
 }
 
@@ -138,8 +131,8 @@ body {
 .meta-card {
   padding: 0.75rem 1rem;
   border-radius: var(--radius-md);
-  background: var(--secondary);
-  border: 1px solid var(--border);
+  background: hsl(var(--secondary));
+  border: 1px solid var(--border-color);
 }
 
 .meta .label {
@@ -147,17 +140,8 @@ body {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: var(--muted-foreground);
+  color: var(--muted-text);
   margin-bottom: 0.25rem;
-}
-
-select {
-  width: 100%;
-  padding: 0.5rem 0.6rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #ffffff;
-  color: var(--text);
 }
 
 .layout {
@@ -171,15 +155,15 @@ select {
   position: sticky;
   top: 2rem;
   align-self: start;
-  background: var(--card);
+  background: var(--card-surface);
   padding: 1.5rem;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   box-shadow: var(--shadow);
 }
 
 .sidebar-header p {
-  color: var(--muted);
+  color: var(--muted-text);
   margin: 0.35rem 0 0;
   font-size: 0.9rem;
 }
@@ -200,8 +184,8 @@ select {
 }
 
 .sidebar a:hover {
-  color: var(--primary);
-  background: var(--secondary);
+  color: hsl(var(--primary));
+  background: hsl(var(--secondary));
 }
 
 .content {
@@ -220,10 +204,10 @@ select {
 
 .card,
 .panel {
-  background: var(--card);
+  background: var(--card-surface);
   border-radius: var(--radius-lg);
   padding: 1.75rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   box-shadow: var(--shadow);
 }
 
@@ -243,11 +227,11 @@ select {
 
 .page-header .pill {
   padding: 0.35rem 0.75rem;
-  background: var(--secondary);
+  background: hsl(var(--secondary));
   color: var(--text);
   border-radius: 999px;
   font-weight: 600;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
 }
 
 .summary-grid {
@@ -260,8 +244,8 @@ select {
 .summary-tile {
   padding: 1rem;
   border-radius: var(--radius-md);
-  background: #ffffff;
-  border: 1px solid var(--border);
+  background: hsl(var(--card));
+  border: 1px solid var(--border-color);
   display: grid;
   gap: 0.35rem;
 }
@@ -270,7 +254,7 @@ select {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  color: var(--muted-foreground);
+  color: var(--muted-text);
 }
 
 .card-grid {
@@ -280,10 +264,10 @@ select {
 }
 
 .object-card {
-  background: #ffffff;
+  background: hsl(var(--card));
   border-radius: var(--radius-md);
   padding: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   display: grid;
   gap: 0.6rem;
 }
@@ -318,7 +302,7 @@ select {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--muted-foreground);
+  color: var(--muted-text);
 }
 
 input,
@@ -326,10 +310,10 @@ textarea {
   width: 100%;
   padding: 0.6rem 0.75rem;
   border-radius: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-color);
   font-family: inherit;
   font-size: 0.95rem;
-  background: #fff;
+  background: hsl(var(--card));
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -352,41 +336,14 @@ button {
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
-  background: var(--secondary);
-  color: var(--secondary-foreground);
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 button:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.15);
-}
-
-button.primary {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border-color: var(--primary);
-}
-
-button.primary:hover {
-  background: #1e293b;
-  border-color: #1e293b;
-}
-
-button.ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-}
-
-button.ghost:hover {
-  background: var(--secondary);
-}
-
-button.danger {
-  background: #fee2e2;
-  border-color: #fecaca;
-  color: #b91c1c;
 }
 
 .button-row {
@@ -449,11 +406,11 @@ button.danger {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--muted-foreground);
+  color: var(--muted-text);
 }
 
 .help-text {
-  color: var(--muted);
+  color: var(--muted-text);
 }
 
 .help-text.error {
@@ -467,10 +424,10 @@ button.danger {
 .empty-state {
   text-align: center;
   padding: 2rem;
-  border: 1px dashed var(--border);
+  border: 1px dashed var(--border-color);
   border-radius: var(--radius-md);
-  color: var(--muted);
-  background: #ffffff;
+  color: var(--muted-text);
+  background: hsl(var(--card));
 }
 
 @media (max-width: 900px) {
