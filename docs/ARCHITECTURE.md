@@ -1,15 +1,16 @@
 # Architecture
 
 ## Overview
-The cockpit is a static, configuration-driven SPA that loads the authoritative ontology config from `docs/ontology-map.json`, hydrates instance data from `seed-data.js`, and persists edits locally. Navigation is hash-based with dedicated pages for business decisions, ontology governance, and auditability.
+The cockpit is a React + Vite SPA that models a client ontology and the operational signals around it. The app loads the authoritative ontology config from `public/docs/ontology-map.json`, hydrates instance data from `src/data/seed-data.js`, and persists edits locally so stakeholders can review health, risks, outcomes, and governance changes across the portfolio. Navigation is hash-based with dedicated pages for business decisions, ontology governance, and auditability.
 
 ## Key files
-- `index.html`: Layout and navigation shell.
-- `styles.css`: Design system and layout.
-- `docs/ontology-map.json`: Canonical config payload.
-- `seed-data.js`: Seeded object instances + links.
-- `storage.js`: Local persistence adapter.
-- `app.js`: Rendering engine, routing, kinetic computations, and action handling.
+- `index.html`: Vite entry document.
+- `src/App.jsx`: Layout, routing, and page rendering.
+- `src/index.css`: Tailwind layers, CSS variables, and global layout styles.
+- `public/docs/ontology-map.json`: Canonical config payload.
+- `src/data/seed-data.js`: Seeded object instances + links.
+- `src/lib/storage.js`: Local persistence adapter.
+- `src/lib/dashboard.js`: Rendering helpers, field inference, and derived calculations.
 
 ## State model
 - `config`: Ontology config (client metadata, semantic + kinetic layers, data integration).
@@ -21,12 +22,13 @@ The cockpit is a static, configuration-driven SPA that loads the authoritative o
 - `config_versions`: Saved versions of the config.
 
 ## Rendering strategy
-- Forms and lists are rendered from `semantic_layer.object_types`.
+- The React UI renders pages and cards from ontology metadata and instance data.
+- Forms and lists are generated from `semantic_layer.object_types`.
 - Fields use type inference heuristics with optional overrides (`field_overrides`).
-- Explainability panels are generated for each derived score/flag.
+- Explainability panels surface derived scores/flags with computation context.
 
 ## Kinetic computation engine
-`app.js` calculates derived fields for:
+`src/lib/dashboard.js` calculates derived fields for:
 - Engagement health
 - Workstream milestone reliability
 - Milestone risk flags

@@ -10,23 +10,24 @@ This prototype helps teams translate ontology definitions and field data into an
 - Keeps ontology configuration editable and versioned.
 
 ## Quick start
-This is a static web app. Serve it with any local web server.
-
-```bash
-python -m http.server 8000
-```
-
-Then open `http://localhost:8000` in your browser.
-
-## Deploying
-Run the built-in Node server for deployment targets that expect a start command:
+This is a React + Vite app with Tailwind + shadcn/ui components.
 
 ```bash
 npm install
-npm start
+npm run dev
 ```
 
-The server listens on `PORT` (default: `3000`). A Dockerfile is included for container-based deployments.
+Then open `http://localhost:5173` in your browser.
+
+## Deploying
+Build the production bundle for Vercel or any static host:
+
+```bash
+npm run build
+npm run preview
+```
+
+Vercel will auto-detect the Vite configuration (no custom server required).
 
 ## Tests
 Install dependencies and run the happy-path Playwright checks:
@@ -37,13 +38,14 @@ npm test
 ```
 
 ## Project structure
-- `index.html` - App shell and layout.
-- `styles.css` - Visual design system and layout.
-- `docs/ontology-map.json` - Authoritative configuration (client metadata, semantic + kinetic layers, data integration).
-- `seed-data.js` - Seeded ontology instances + links.
-- `data.js` - Fallback template data (legacy).
-- `storage.js` - Local persistence adapter.
-- `app.js` - Rendering engine, routing, and state management.
+- `index.html` - Vite entry document.
+- `src/App.jsx` - Main React layout, routes, and UI rendering.
+- `src/index.css` - Tailwind layers, CSS variables, and global layout styles.
+- `src/data/initial-data.js` - Fallback template data.
+- `src/data/seed-data.js` - Seeded ontology instances + links.
+- `src/lib/storage.js` - Local persistence adapter.
+- `src/lib/dashboard.js` - Derived metrics + ontology helpers.
+- `public/docs/ontology-map.json` - Authoritative configuration (client metadata, semantic + kinetic layers, data integration).
 - `docs/PLAN.md` - Delivery plan and milestones.
 - `docs/ARCHITECTURE.md` - UI structure and state model.
 - `docs/USER_GUIDE.md` - How to use the cockpit.
