@@ -87,19 +87,21 @@ const RecordField = ({ label, value, fieldType, referenceMap, onChange, disabled
 
   if (fieldType === "reference" && referenceMap[label]) {
     const { options, idField, objectType } = referenceMap[label];
+    const clearValue = "__clear__";
+    const selectValue = value === "" || value == null ? clearValue : value;
     return (
       <div className="field-group">
         <label>{toTitle(label)}</label>
         <Select
-          value={value ?? ""}
-          onValueChange={(next) => onChange(next)}
+          value={selectValue}
+          onValueChange={(next) => onChange(next === clearValue ? "" : next)}
           disabled={disabled}
         >
           <SelectTrigger>
             <SelectValue placeholder={`Select ${toTitle(objectType.id)}`} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Select {toTitle(objectType.id)}</SelectItem>
+            <SelectItem value={clearValue}>Clear selection</SelectItem>
             {options.map((option) => (
               <SelectItem key={option[idField]} value={option[idField]}>
                 {option.name || option.title || option[idField]}
