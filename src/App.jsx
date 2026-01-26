@@ -15,7 +15,7 @@ import {
   generateAuditEntry,
 } from "@/lib/dashboard";
 import { clearState } from "@/lib/storage";
-import { NAV_ITEMS, readRouteFromHash, resolveActivePage } from "@/lib/routing";
+import { NAV_ITEMS, readRouteFromHash, resolveActivePage } from "@/lib/routing.mjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
