@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { NAV_ITEMS, ROUTES, readRouteFromHash, resolveActivePage } from "../../src/lib/routing.js";
+import { NAV_ITEMS, ROUTES, readRouteFromHash, resolveActivePage } from "../../src/lib/routing.mjs";
 
 const navPaths = NAV_ITEMS.map((item) => item.path);
 assert.deepEqual(navPaths, ROUTES);
