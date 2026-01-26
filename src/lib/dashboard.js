@@ -104,7 +104,7 @@ export const computeDerived = (state) => {
       const snapshots = snapshotsByMetric[metric.metric_id] || [];
       if (snapshots.length === 0) return acc;
       const latest = snapshots.reduce((latestSnap, snap) =>
-        new Date(snap.measured_at) > new Date(latestSnap.measured_at) ? snap : latestSnap
+        new Date(snap.observed_at) > new Date(latestSnap.observed_at) ? snap : latestSnap
       );
       if (metric.target_value === 0) return acc;
       return acc + Number(latest.value) / Number(metric.target_value);
@@ -124,6 +124,53 @@ export const computeDerived = (state) => {
               (snap) => Number(snap.value) >= Number(metric.target_value)
             )
         ).length,
+      },
+    });
+  });
+
+  (instances.workstream || []).forEach((workstream) => {
+    const milestones = milestonesByWorkstream[workstream.workstream_id] || [];
+    const completed = milestones.filter((milestone) => milestone.status === "Completed");
+    const onTime = completed.filter(
+      (milestone) =>
+        milestone.completed_date &&
+        milestone.due_date &&
+        new Date(milestone.completed_date) <= new Date(milestone.due_date)
+    );
+    const onTimeRate = completed.length ? onTime.length / completed.length : 0;
+    setDerived(state, {
+      object_type: "workstream",
+      object_id: workstream.workstream_id,
+      field: "milestone_on_time_rate",
+      value: Number(onTimeRate.toFixed(2)),
+      computed_at: now,
+      explanation_json: {
+        milestones_completed: completed.length,
+        milestones_on_time: onTime.length,
+      },
+    });
+  });
+
+  (instances.milestone || []).forEach((milestone) => {
+    const dueSoonWindow = 21;
+    const dueDate = milestone.due_date ? new Date(milestone.due_date) : null;
+    const daysUntilDue = dueDate ? Math.ceil((dueDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
+    const hasBlocker = Boolean(milestone.blocker_summary);
+    const lowConfidence =
+      String(milestone.confidence_level || "").toLowerCase() === "low";
+    const dueSoon = daysUntilDue !== null && daysUntilDue <= dueSoonWindow;
+    const atRisk = Boolean((lowConfidence || hasBlocker) && dueSoon);
+    setDerived(state, {
+      object_type: "milestone",
+      object_id: milestone.milestone_id,
+      field: "at_risk_flag",
+      value: atRisk,
+      computed_at: now,
+      explanation_json: {
+        confidence_level: milestone.confidence_level || "Unknown",
+        blocker_summary: milestone.blocker_summary || "None",
+        days_until_due: daysUntilDue,
+        window_days: dueSoonWindow,
       },
     });
   });
