@@ -16,10 +16,21 @@ export const ROUTES = NAV_ITEMS.map((item) => item.path);
 const DEFAULT_ROUTE = "overview";
 
 export const readRouteFromHash = (hashValue) => {
-  const hash = hashValue || `#/${DEFAULT_ROUTE}`;
-  const [page, id] = hash.replace(/^#\//, "").split("/");
+  const fallback = `#/${DEFAULT_ROUTE}`;
+  const raw = hashValue || window.location.hash || fallback;
+  const hashIndex = raw.indexOf("#");
+  const hash = hashIndex >= 0 ? raw.slice(hashIndex) : raw;
+  const stripped = hash.replace(/^#/, "").replace(/^\/+/, "");
+  const [page, id] = stripped.split("/");
   const normalizedPage = ROUTES.includes(page) ? page : DEFAULT_ROUTE;
-  return { page: normalizedPage, id };
+  return { page: normalizedPage, id: id ? decodeURIComponent(id) : undefined };
+};
+
+export const toHashHref = ({ page, id }) => {
+  const normalizedPage = ROUTES.includes(page) ? page : DEFAULT_ROUTE;
+  const parts = [normalizedPage];
+  if (id) parts.push(encodeURIComponent(id));
+  return `#/${parts.join("/")}`;
 };
 
 export const resolveActivePage = ({ route, accountDetail }) => {

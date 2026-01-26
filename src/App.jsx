@@ -15,7 +15,7 @@ import {
   generateAuditEntry,
 } from "@/lib/dashboard";
 import { clearState } from "@/lib/storage";
-import { NAV_ITEMS, readRouteFromHash, resolveActivePage } from "@/lib/routing.mjs";
+import { NAV_ITEMS, readRouteFromHash, resolveActivePage, toHashHref } from "@/lib/routing.mjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -437,7 +437,7 @@ const App = () => {
   useEffect(() => {
     if (!state) return;
     if (route.page === "accounts" && route.id && !accountDetail) {
-      window.location.hash = "#/accounts";
+      window.location.hash = toHashHref({ page: "accounts" });
     }
   }, [accountDetail, route.id, route.page, state]);
 
@@ -553,7 +553,7 @@ const App = () => {
           </div>
           <nav>
             {NAV_ITEMS.map((item) => (
-              <a key={item.path} href={`#/${item.path}`}>
+              <a key={item.path} href={toHashHref({ page: item.path })}>
                 {item.label}
               </a>
             ))}
@@ -580,7 +580,10 @@ const App = () => {
                     <Card key={account.account_id} className="object-card">
                       <CardHeader className="flex flex-row items-center justify-between gap-3">
                         <CardTitle>{account.account_name}</CardTitle>
-                        <a className="link" href={`#/accounts/${account.account_id}`}>
+                        <a
+                          className="link"
+                          href={toHashHref({ page: "accounts", id: account.account_id })}
+                        >
                           Open
                         </a>
                       </CardHeader>
@@ -611,7 +614,10 @@ const App = () => {
                     <Card key={account.account_id} className="object-card">
                       <CardHeader className="flex flex-row items-center justify-between gap-3">
                         <CardTitle>{account.account_name}</CardTitle>
-                        <a className="link" href={`#/accounts/${account.account_id}`}>
+                        <a
+                          className="link"
+                          href={toHashHref({ page: "accounts", id: account.account_id })}
+                        >
                           Open
                         </a>
                       </CardHeader>
@@ -646,7 +652,7 @@ const App = () => {
                     title={accountDetail.account_name}
                     description="Account command center with explainable scores and actions."
                     action={
-                      <a className="link" href="#/accounts">
+                      <a className="link" href={toHashHref({ page: "accounts" })}>
                         Back to accounts
                       </a>
                     }
