@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 
-import { NAV_ITEMS, ROUTES, readRouteFromHash, resolveActivePage } from "../../src/lib/routing.mjs";
+import {
+  NAV_ITEMS,
+  ROUTES,
+  readRouteFromHash,
+  resolveActivePage,
+  toHashHref,
+} from "../../src/lib/routing.mjs";
 
 const navPaths = NAV_ITEMS.map((item) => item.path);
 assert.deepEqual(navPaths, ROUTES);
@@ -10,7 +16,20 @@ assert.deepEqual(readRouteFromHash("#/accounts/acc_123"), {
   id: "acc_123",
 });
 
+assert.deepEqual(readRouteFromHash("http://localhost:5173/#/accounts/acct_nova"), {
+  page: "accounts",
+  id: "acct_nova",
+});
+
+assert.deepEqual(readRouteFromHash("#/accounts/acct%20nova"), {
+  page: "accounts",
+  id: "acct nova",
+});
+
 assert.equal(readRouteFromHash("#/not-a-page").page, "overview");
+
+assert.equal(toHashHref({ page: "accounts", id: "acct nova" }), "#/accounts/acct%20nova");
+assert.equal(toHashHref({ page: "not-a-page" }), "#/overview");
 
 assert.equal(
   resolveActivePage({
