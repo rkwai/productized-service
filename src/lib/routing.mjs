@@ -1,19 +1,20 @@
 export const NAV_ITEMS = [
-  { path: "overview", label: "Executive Overview" },
-  { path: "accounts", label: "Accounts" },
-  { path: "engagements", label: "Engagements" },
-  { path: "outcomes", label: "Outcomes & KPIs" },
-  { path: "risks", label: "Risks & Issues" },
-  { path: "actions", label: "Action Center" },
-  { path: "ontology", label: "Ontology Studio" },
-  { path: "data-integration", label: "Data Integration" },
-  { path: "audit", label: "Audit & Activity" },
-  { path: "json-export", label: "JSON Export" },
+  { path: "home", label: "Home / Executive Summary" },
+  { path: "portfolio", label: "Portfolio (Accounts)" },
+  { path: "engagement-health", label: "Engagement Health" },
+  { path: "delivery-reliability", label: "Delivery Reliability" },
+  { path: "value-realization", label: "Value Realization" },
+  { path: "risks-change-control", label: "Risks & Change Control" },
+  { path: "renewal-collections", label: "Renewal & Collections" },
+  { path: "governance", label: "Governance" },
+  { path: "action-center", label: "Action Center / Inbox" },
+  { path: "ontology-explorer", label: "Ontology Explorer" },
+  { path: "admin", label: "Admin / Settings" },
 ];
 
 export const ROUTES = NAV_ITEMS.map((item) => item.path);
 
-const DEFAULT_ROUTE = "overview";
+const DEFAULT_ROUTE = "home";
 
 export const readRouteFromHash = (hashValue) => {
   const fallback = `#/${DEFAULT_ROUTE}`;
@@ -21,21 +22,21 @@ export const readRouteFromHash = (hashValue) => {
   const hashIndex = raw.indexOf("#");
   const hash = hashIndex >= 0 ? raw.slice(hashIndex) : raw;
   const stripped = hash.replace(/^#/, "").replace(/^\/+/, "");
-  const [page, id] = stripped.split("/");
+  const [page, objectType, objectId] = stripped.split("/");
   const normalizedPage = ROUTES.includes(page) ? page : DEFAULT_ROUTE;
-  return { page: normalizedPage, id: id ? decodeURIComponent(id) : undefined };
+  return {
+    page: normalizedPage,
+    objectType: objectType ? decodeURIComponent(objectType) : undefined,
+    objectId: objectId ? decodeURIComponent(objectId) : undefined,
+  };
 };
 
-export const toHashHref = ({ page, id }) => {
+export const toHashHref = ({ page, objectType, objectId }) => {
   const normalizedPage = ROUTES.includes(page) ? page : DEFAULT_ROUTE;
   const parts = [normalizedPage];
-  if (id) parts.push(encodeURIComponent(id));
+  if (objectType) parts.push(encodeURIComponent(objectType));
+  if (objectId) parts.push(encodeURIComponent(objectId));
   return `#/${parts.join("/")}`;
 };
 
-export const resolveActivePage = ({ route, accountDetail }) => {
-  if (route.page === "accounts" && route.id) {
-    return accountDetail ? "account-detail" : "accounts";
-  }
-  return route.page;
-};
+export const resolveActivePage = ({ route }) => route.page;
