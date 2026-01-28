@@ -279,6 +279,8 @@ const DataTable = ({ columns, rows, onRowClick }) => (
   </div>
 );
 
+const ALL_FILTER_VALUE = "__all__";
+
 const GlobalFiltersBar = ({ filters, onChange, filterOptions }) => (
   <div className="filter-bar">
     {[
@@ -292,13 +294,15 @@ const GlobalFiltersBar = ({ filters, onChange, filterOptions }) => (
         <span>{filter.label}</span>
         <Select
           value={filters[filter.key]}
-          onValueChange={(value) => onChange(filter.key, value)}
+          onValueChange={(value) =>
+            onChange(filter.key, value === ALL_FILTER_VALUE ? "" : value)
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder={`All ${filter.label}`} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All</SelectItem>
+            <SelectItem value={ALL_FILTER_VALUE}>All</SelectItem>
             {filter.options.filter(Boolean).map((option) => (
               <SelectItem key={option} value={option}>
                 {option}
