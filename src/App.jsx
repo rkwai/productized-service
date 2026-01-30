@@ -53,6 +53,70 @@ const useHashRoute = () => {
 
 const formatNumber = (value) =>
   Number.isFinite(value) ? value.toLocaleString() : value ?? "—";
+const formatDelta = (value) => {
+  if (!Number.isFinite(value)) return "—";
+  const rounded = Math.round(value);
+  return `${rounded > 0 ? "+" : ""}${rounded}`;
+};
+const formatDays = (value) => (Number.isFinite(value) ? `${value}d` : "—");
+const getHealthTone = (value) => {
+  if (!Number.isFinite(value)) return "status-pill--neutral";
+  if (value >= 75) return "status-pill--good";
+  if (value >= 55) return "status-pill--warn";
+  return "status-pill--bad";
+};
+const getRiskTone = (value) => {
+  if (!Number.isFinite(value)) return "status-pill--neutral";
+  if (value >= 70) return "status-pill--bad";
+  if (value >= 45) return "status-pill--warn";
+  return "status-pill--good";
+};
+const getFreshnessTone = (value) => {
+  if (!Number.isFinite(value)) return "status-pill--neutral";
+  if (value <= 14) return "status-pill--good";
+  if (value <= 30) return "status-pill--warn";
+  return "status-pill--bad";
+};
+const StatusPill = ({ label, tone }) => <span className={`status-pill ${tone}`}>{label}</span>;
+const PORTFOLIO_COLUMNS = [
+  "Select",
+  "Account",
+  "Industry",
+  "Region",
+  "Segment",
+  "Health",
+  "Renewal risk",
+  "Churn risk",
+  "Data freshness",
+  "Missing data",
+  "Total value",
+  "Estimated LTV",
+  "LTV at risk",
+];
+const PORTFOLIO_VIEW_PRESETS = [
+  {
+    name: "Default",
+    groupBy: "none",
+    filters: { health: "all", risk: "all", missing: "all" },
+    columns: PORTFOLIO_COLUMNS,
+  },
+  {
+    name: "High Risk Focus",
+    groupBy: "region",
+    filters: { health: "all", risk: "high", missing: "all" },
+    columns: PORTFOLIO_COLUMNS.filter((column) =>
+      ["Select", "Account", "Region", "Health", "Renewal risk", "Churn risk", "Data freshness", "LTV at risk"].includes(column)
+    ),
+  },
+  {
+    name: "Data Gaps",
+    groupBy: "segment",
+    filters: { health: "all", risk: "all", missing: "gaps" },
+    columns: PORTFOLIO_COLUMNS.filter((column) =>
+      ["Select", "Account", "Segment", "Region", "Missing data", "Data freshness", "Health"].includes(column)
+    ),
+  },
+];
 
 const DerivedPanel = ({ derived, label }) => {
   if (!derived) return null;
@@ -214,6 +278,36 @@ const ObjectListPanel = ({ state, objectTypeId, onUpdateRecord, onDeleteRecord, 
   const referenceMap = buildReferenceMap(state.config, state.instances);
   const isViewer = state.role === "Viewer";
 
+  const portfolioBulkActions = [
+    {
+      id: "assign_owner",
+      description: "Assign a primary owner to the selected accounts.",
+      parameters: ["owner", "account_ids"],
+      side_effects: ["update_account_owner", "notify_owner"],
+    },
+    {
+      id: "create_task",
+      description: "Create a follow-up task tied to the selected accounts.",
+      parameters: ["task_title", "due_date", "account_ids"],
+      side_effects: ["create_task", "notify_account_team"],
+    },
+  ];
+
+  const portfolioExportActions = [
+    {
+      id: "schedule_export",
+      description: "Schedule a recurring export or portfolio report.",
+      parameters: ["export_type", "frequency", "recipients"],
+      side_effects: ["schedule_export_job", "email_report"],
+    },
+    {
+      id: "generate_export",
+      description: "Generate an on-demand portfolio export.",
+      parameters: ["export_type", "format", "recipients"],
+      side_effects: ["generate_export", "deliver_export"],
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="card-grid">
@@ -244,14 +338,14 @@ const KpiCard = ({ label, value, helper }) => (
   </div>
 );
 
-const ChartCard = ({ title, description }) => (
+const ChartCard = ({ title, description, children }) => (
   <Card className="chart-card">
     <CardHeader>
       <CardTitle>{title}</CardTitle>
       {description ? <CardDescription>{description}</CardDescription> : null}
     </CardHeader>
     <CardContent>
-      <div className="chart-placeholder">Chart placeholder</div>
+      {children ? children : <div className="chart-placeholder">Chart placeholder</div>}
     </CardContent>
   </Card>
 );
@@ -268,7 +362,11 @@ const DataTable = ({ columns, rows, onRowClick }) => (
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr key={row.key} onClick={row.onClick || (() => onRowClick?.(row))}>
+          <tr
+            key={row.key}
+            className={row.className}
+            onClick={row.onClick || (onRowClick ? () => onRowClick(row) : undefined)}
+          >
             {columns.map((column) => (
               <td key={`${row.key}-${column}`}>{row[column] ?? "—"}</td>
             ))}
@@ -505,6 +603,12 @@ const App = () => {
     dateRange: "",
   });
   const [actionSheet, setActionSheet] = useState(null);
+  const [portfolioSavedViews, setPortfolioSavedViews] = useState(PORTFOLIO_VIEW_PRESETS);
+  const [portfolioView, setPortfolioView] = useState(PORTFOLIO_VIEW_PRESETS[0].name);
+  const [portfolioGroupBy, setPortfolioGroupBy] = useState(PORTFOLIO_VIEW_PRESETS[0].groupBy);
+  const [portfolioFilters, setPortfolioFilters] = useState(PORTFOLIO_VIEW_PRESETS[0].filters);
+  const [portfolioColumns, setPortfolioColumns] = useState(PORTFOLIO_VIEW_PRESETS[0].columns);
+  const [selectedPortfolioAccounts, setSelectedPortfolioAccounts] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -679,6 +783,45 @@ const App = () => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handlePortfolioViewChange = (value) => {
+    const view = portfolioSavedViews.find((item) => item.name === value);
+    if (!view) return;
+    setPortfolioView(view.name);
+    setPortfolioGroupBy(view.groupBy);
+    setPortfolioFilters(view.filters);
+    setPortfolioColumns(view.columns);
+  };
+
+  const handlePortfolioFilterChange = (key, value) => {
+    setPortfolioFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handlePortfolioColumnToggle = (column) => {
+    setPortfolioColumns((prev) =>
+      prev.includes(column) ? prev.filter((item) => item !== column) : [...prev, column]
+    );
+  };
+
+  const handlePortfolioSaveView = () => {
+    const name = window.prompt("Name this view");
+    if (!name) return;
+    const newView = {
+      name,
+      groupBy: portfolioGroupBy,
+      filters: portfolioFilters,
+      columns: portfolioColumns,
+    };
+    setPortfolioSavedViews((prev) => [...prev.filter((view) => view.name !== name), newView]);
+    setPortfolioView(name);
+  };
+
+  const handlePortfolioAction = (action) => {
+    setActionSheet({
+      action,
+      context: { account_ids: selectedPortfolioAccounts.join(", ") },
+    });
+  };
+
   const handleSelectObject = ({ page, objectType, objectId }) => {
     window.location.hash = toHashHref({ page, objectType, objectId });
   };
@@ -809,35 +952,129 @@ const App = () => {
 
   const isViewer = state.role === "Viewer";
 
-  const attentionAccounts = accounts
-    .map((account) => ({
-      account,
-      health: getDerived(state, "client_account", account.account_id, "health_score"),
-      risk: getDerived(state, "client_account", account.account_id, "renewal_risk_score"),
-      segment: getDerived(state, "client_account", account.account_id, "segment_tag"),
-    }))
-    .sort((a, b) => (b.risk?.value || 0) - (a.risk?.value || 0))
+  const accountSignals = useMemo(
+    () =>
+      accounts.map((account) => {
+        const health = getDerived(state, "client_account", account.account_id, "health_score");
+        const risk = getDerived(state, "client_account", account.account_id, "renewal_risk_score");
+        const churn = getDerived(state, "client_account", account.account_id, "churn_risk_score");
+        const freshness = getDerived(state, "client_account", account.account_id, "data_freshness_days");
+        const missing = getDerived(state, "client_account", account.account_id, "missing_data_fields");
+        const ltvAtRisk = getDerived(state, "client_account", account.account_id, "ltv_at_risk");
+        const segment = getDerived(state, "client_account", account.account_id, "segment_tag");
+        return {
+          account,
+          healthValue: health?.value ?? account.health_score,
+          riskValue: risk?.value ?? account.renewal_risk_score,
+          churnValue: churn?.value ?? 0,
+          freshnessDays: freshness?.value ?? null,
+          missingFields: missing?.value ?? [],
+          ltvAtRisk: ltvAtRisk?.value ?? 0,
+          segmentValue: segment?.value ?? account.segment_tag,
+        };
+      }),
+    [accounts, state]
+  );
+
+  const attentionAccounts = accountSignals
+    .sort((a, b) => (b.riskValue || 0) - (a.riskValue || 0))
     .slice(0, 4);
 
-  const avgHealth = accounts.length
+  const avgHealth = accountSignals.length
+    ? Math.round(accountSignals.reduce((sum, item) => sum + (item.healthValue || 0), 0) / accountSignals.length)
+    : 0;
+
+  const avgRisk = accountSignals.length
+    ? Math.round(accountSignals.reduce((sum, item) => sum + (item.riskValue || 0), 0) / accountSignals.length)
+    : 0;
+
+  const avgChurnRisk = accountSignals.length
+    ? Math.round(accountSignals.reduce((sum, item) => sum + (item.churnValue || 0), 0) / accountSignals.length)
+    : 0;
+
+  const totalLtvAtRisk = accountSignals.reduce((sum, item) => sum + Number(item.ltvAtRisk || 0), 0);
+  const totalContractValue = accountSignals.reduce(
+    (sum, item) => sum + Number(item.account.total_contract_value_to_date || 0),
+    0
+  );
+
+  const avgFreshnessDays = accountSignals.length
     ? Math.round(
-        accounts.reduce(
-          (sum, account) =>
-            sum + (getDerived(state, "client_account", account.account_id, "health_score")?.value || 0),
-          0
-        ) / accounts.length
+        accountSignals.reduce((sum, item) => sum + (Number.isFinite(item.freshnessDays) ? item.freshnessDays : 0), 0) /
+          accountSignals.length
       )
     : 0;
 
-  const avgRisk = accounts.length
-    ? Math.round(
-        accounts.reduce(
-          (sum, account) =>
-            sum + (getDerived(state, "client_account", account.account_id, "renewal_risk_score")?.value || 0),
-          0
-        ) / accounts.length
-      )
-    : 0;
+  const freshAccounts = accountSignals.filter((item) => Number.isFinite(item.freshnessDays) && item.freshnessDays <= 30)
+    .length;
+  const missingDataAccounts = accountSignals.filter((item) => item.missingFields.length).length;
+
+  const buildBreakdown = (items, keyFn) => {
+    const groups = items.reduce((acc, item) => {
+      const key = keyFn(item) || "Unassigned";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+    return Object.entries(groups).map(([key, group]) => {
+      const avgHealthScore = Math.round(group.reduce((sum, item) => sum + (item.healthValue || 0), 0) / group.length);
+      const avgRiskScore = Math.round(group.reduce((sum, item) => sum + (item.riskValue || 0), 0) / group.length);
+      return {
+        key,
+        count: group.length,
+        avgHealthScore,
+        avgRiskScore,
+        healthDelta: avgHealthScore - avgHealth,
+        riskDelta: avgRiskScore - avgRisk,
+      };
+    });
+  };
+
+  const segmentBreakdown = useMemo(
+    () => buildBreakdown(accountSignals, (item) => item.segmentValue),
+    [accountSignals, avgHealth, avgRisk]
+  );
+
+  const regionBreakdown = useMemo(
+    () => buildBreakdown(accountSignals, (item) => item.account.region),
+    [accountSignals, avgHealth, avgRisk]
+  );
+
+  const segmentCohortRows = segmentBreakdown.map((segment) => ({
+    key: `segment-${segment.key}`,
+    Cohort: segment.key,
+    Accounts: segment.count,
+    "Avg health": (
+      <div className="delta-cell">
+        <StatusPill label={segment.avgHealthScore} tone={getHealthTone(segment.avgHealthScore)} />
+        <span>{formatDelta(segment.healthDelta)}</span>
+      </div>
+    ),
+    "Avg risk": (
+      <div className="delta-cell">
+        <StatusPill label={segment.avgRiskScore} tone={getRiskTone(segment.avgRiskScore)} />
+        <span>{formatDelta(segment.riskDelta)}</span>
+      </div>
+    ),
+  }));
+
+  const regionCohortRows = regionBreakdown.map((region) => ({
+    key: `region-${region.key}`,
+    Cohort: region.key,
+    Accounts: region.count,
+    "Avg health": (
+      <div className="delta-cell">
+        <StatusPill label={region.avgHealthScore} tone={getHealthTone(region.avgHealthScore)} />
+        <span>{formatDelta(region.healthDelta)}</span>
+      </div>
+    ),
+    "Avg risk": (
+      <div className="delta-cell">
+        <StatusPill label={region.avgRiskScore} tone={getRiskTone(region.avgRiskScore)} />
+        <span>{formatDelta(region.riskDelta)}</span>
+      </div>
+    ),
+  }));
 
   const onTrackOutcomes = (state.instances.outcome || []).filter(
     (outcome) => (getDerived(state, "outcome", outcome.outcome_id, "progress_pct")?.value || 0) >= 0.6
@@ -863,6 +1100,172 @@ const App = () => {
     accounts: accounts.map((account) => account.account_name),
     engagements: engagements.map((engagement) => engagement.engagement_name),
   };
+
+  const portfolioFilterOptions = {
+    health: [
+      { label: "All", value: "all" },
+      { label: "Healthy", value: "healthy" },
+      { label: "Needs attention", value: "watch" },
+      { label: "Critical", value: "critical" },
+    ],
+    risk: [
+      { label: "All", value: "all" },
+      { label: "Low", value: "low" },
+      { label: "Medium", value: "medium" },
+      { label: "High", value: "high" },
+    ],
+    missing: [
+      { label: "All", value: "all" },
+      { label: "Only gaps", value: "gaps" },
+      { label: "Complete", value: "complete" },
+    ],
+  };
+
+  const portfolioHealthTier = (value) => {
+    if (!Number.isFinite(value)) return "critical";
+    if (value >= 75) return "healthy";
+    if (value >= 55) return "watch";
+    return "critical";
+  };
+
+  const portfolioRiskTier = (value) => {
+    if (!Number.isFinite(value)) return "high";
+    if (value >= 70) return "high";
+    if (value >= 45) return "medium";
+    return "low";
+  };
+
+  const portfolioFilteredAccounts = accountSignals.filter((item) => {
+    if (portfolioFilters.health !== "all" && portfolioHealthTier(item.healthValue) !== portfolioFilters.health) {
+      return false;
+    }
+    if (portfolioFilters.risk !== "all" && portfolioRiskTier(item.riskValue) !== portfolioFilters.risk) {
+      return false;
+    }
+    const missingTier = item.missingFields.length ? "gaps" : "complete";
+    if (portfolioFilters.missing !== "all" && missingTier !== portfolioFilters.missing) {
+      return false;
+    }
+    return true;
+  });
+
+  const portfolioAccountIds = portfolioFilteredAccounts.map((item) => item.account.account_id);
+  const allPortfolioSelected =
+    portfolioAccountIds.length > 0 &&
+    portfolioAccountIds.every((id) => selectedPortfolioAccounts.includes(id));
+
+  const setPortfolioSelection = (accountId, checked) => {
+    setSelectedPortfolioAccounts((prev) => {
+      if (checked) {
+        return prev.includes(accountId) ? prev : [...prev, accountId];
+      }
+      return prev.filter((item) => item !== accountId);
+    });
+  };
+
+  const togglePortfolioSelectAll = (checked) => {
+    setSelectedPortfolioAccounts(checked ? portfolioAccountIds : []);
+  };
+
+  const visiblePortfolioColumns = PORTFOLIO_COLUMNS.filter((column) => portfolioColumns.includes(column));
+
+  const portfolioGroupedRows = useMemo(() => {
+    if (portfolioGroupBy === "none") {
+      return portfolioFilteredAccounts.map((item) => ({ type: "row", item }));
+    }
+    const groupKey = portfolioGroupBy === "region" ? "region" : "segment";
+    const groups = portfolioFilteredAccounts.reduce((acc, item) => {
+      const key = groupKey === "region" ? item.account.region || "Unassigned" : item.segmentValue || "Unassigned";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+    return Object.entries(groups).flatMap(([key, items]) => [
+      { type: "group", key, count: items.length },
+      ...items.map((item) => ({ type: "row", item })),
+    ]);
+  }, [portfolioFilteredAccounts, portfolioGroupBy]);
+
+  const portfolioTableRows = useMemo(
+    () =>
+      portfolioGroupedRows.map((entry) => {
+        if (entry.type === "group") {
+          return {
+            key: `group-${entry.key}`,
+            className: "table-group-row",
+            Select: "",
+            Account: (
+              <div className="group-label">
+                <strong>{portfolioGroupBy === "region" ? "Region" : "Segment"}:</strong> {entry.key}
+                <span>{entry.count} accounts</span>
+              </div>
+            ),
+            Industry: "",
+            Region: "",
+            Segment: "",
+            Health: "",
+            "Renewal risk": "",
+            "Churn risk": "",
+            "Data freshness": "",
+            "Missing data": "",
+            "Total value": "",
+            "Estimated LTV": "",
+            "LTV at risk": "",
+          };
+        }
+        const { account, healthValue, riskValue, churnValue, freshnessDays, missingFields, ltvAtRisk, segmentValue } =
+          entry.item;
+        const isSelected = selectedPortfolioAccounts.includes(account.account_id);
+        return {
+          key: account.account_id,
+          Select: (
+            <div className="checkbox-cell" onClick={(event) => event.stopPropagation()}>
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={(checked) => setPortfolioSelection(account.account_id, Boolean(checked))}
+                disabled={isViewer}
+                aria-label={`Select ${account.account_name}`}
+              />
+            </div>
+          ),
+          Account: account.account_name,
+          Industry: account.industry,
+          Region: account.region,
+          Segment: segmentValue,
+          Health: <StatusPill label={healthValue ?? "—"} tone={getHealthTone(healthValue)} />,
+          "Renewal risk": <StatusPill label={riskValue ?? "—"} tone={getRiskTone(riskValue)} />,
+          "Churn risk": <StatusPill label={churnValue ?? "—"} tone={getRiskTone(churnValue)} />,
+          "Data freshness": (
+            <StatusPill label={formatDays(freshnessDays)} tone={getFreshnessTone(freshnessDays)} />
+          ),
+          "Missing data": missingFields.length ? (
+            <div className="missing-data">
+              <StatusPill label={`${missingFields.length} gaps`} tone="status-pill--warn" />
+              <span>{missingFields.slice(0, 2).map(toTitle).join(", ")}</span>
+            </div>
+          ) : (
+            <StatusPill label="Complete" tone="status-pill--good" />
+          ),
+          "Total value": formatNumber(account.total_contract_value_to_date),
+          "Estimated LTV": formatNumber(account.estimated_ltv),
+          "LTV at risk": formatNumber(ltvAtRisk),
+          onClick: () =>
+            handleSelectObject({
+              page: "portfolio",
+              objectType: "client_account",
+              objectId: account.account_id,
+            }),
+        };
+      }),
+    [
+      handleSelectObject,
+      isViewer,
+      portfolioGroupBy,
+      portfolioGroupedRows,
+      selectedPortfolioAccounts,
+      setPortfolioSelection,
+    ]
+  );
 
   const configMetadata = {
     company_name: state.config.client_metadata.company_name,
@@ -1055,12 +1458,12 @@ const App = () => {
                         "Segment",
                         "Value",
                       ]}
-                      rows={attentionAccounts.map(({ account, health, risk, segment }) => ({
+                      rows={attentionAccounts.map(({ account, healthValue, riskValue, segmentValue }) => ({
                         key: account.account_id,
                         Account: account.account_name,
-                        Health: health?.value ?? account.health_score,
-                        "Renewal risk": risk?.value ?? account.renewal_risk_score,
-                        Segment: segment?.value ?? account.segment_tag,
+                        Health: healthValue ?? account.health_score,
+                        "Renewal risk": riskValue ?? account.renewal_risk_score,
+                        Segment: segmentValue ?? account.segment_tag,
                         Value: formatNumber(account.total_contract_value_to_date),
                         onClick: () =>
                           handleSelectObject({
@@ -1094,55 +1497,233 @@ const App = () => {
                 <KpiCard label="# Accounts" value={accounts.length} />
                 <KpiCard label="Avg Health" value={avgHealth} />
                 <KpiCard label="Avg Renewal Risk" value={avgRisk} />
+                <KpiCard label="Avg Churn Risk" value={avgChurnRisk} />
                 <KpiCard
-                  label="Total Contract Value"
-                  value={formatNumber(
-                    accounts.reduce((sum, account) => sum + Number(account.total_contract_value_to_date || 0), 0)
-                  )}
+                  label="Data Freshness"
+                  value={formatDays(avgFreshnessDays)}
+                  helper={`${freshAccounts}/${accounts.length} updated <30d`}
+                />
+                <KpiCard
+                  label="LTV at Risk"
+                  value={formatNumber(totalLtvAtRisk)}
+                  helper={`${missingDataAccounts} accounts with data gaps`}
                 />
               </div>
+              <Card className="panel">
+                <h3>Cohort metrics</h3>
+                <p className="help-text">Segment and region cohorts with deltas vs portfolio averages.</p>
+                <div className="cohort-grid">
+                  <div>
+                    <h4>Segment cohorts</h4>
+                    <DataTable columns={["Cohort", "Accounts", "Avg health", "Avg risk"]} rows={segmentCohortRows} />
+                  </div>
+                  <div>
+                    <h4>Regional cohorts</h4>
+                    <DataTable columns={["Cohort", "Accounts", "Avg health", "Avg risk"]} rows={regionCohortRows} />
+                  </div>
+                </div>
+              </Card>
               <div className="visual-grid">
-                <ChartCard title="Health vs Risk Quadrant" />
-                <ChartCard title="Regional Breakdown" />
+                <ChartCard
+                  title="Segment breakdown"
+                  description="Account mix with average health and renewal risk."
+                >
+                  <div className="chart-breakdown">
+                    {segmentBreakdown.map((segment) => (
+                      <div key={segment.key} className="breakdown-row">
+                        <div>
+                          <strong>{segment.key}</strong>
+                          <span>{segment.count} accounts</span>
+                        </div>
+                        <div>
+                          <StatusPill label={`H ${segment.avgHealthScore}`} tone={getHealthTone(segment.avgHealthScore)} />
+                          <StatusPill label={`R ${segment.avgRiskScore}`} tone={getRiskTone(segment.avgRiskScore)} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+                <ChartCard title="Regional breakdown" description="Health and risk by region.">
+                  <div className="chart-breakdown">
+                    {regionBreakdown.map((region) => (
+                      <div key={region.key} className="breakdown-row">
+                        <div>
+                          <strong>{region.key}</strong>
+                          <span>{region.count} accounts</span>
+                        </div>
+                        <div>
+                          <StatusPill label={`H ${region.avgHealthScore}`} tone={getHealthTone(region.avgHealthScore)} />
+                          <StatusPill label={`R ${region.avgRiskScore}`} tone={getRiskTone(region.avgRiskScore)} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+                <ChartCard
+                  title="Health vs Risk Quadrant"
+                  description="Quadrant view of portfolio health vs renewal risk."
+                />
               </div>
               <div className="module-grid">
                 <div className="module-main">
                   <Card className="panel">
                     <h3>Accounts</h3>
-                    <DataTable
-                      columns={[
-                        "Account",
-                        "Industry",
-                        "Region",
-                        "Segment",
-                        "Health",
-                        "Renewal risk",
-                        "Total value",
-                        "Estimated LTV",
-                      ]}
-                      rows={accounts.map((account) => {
-                        const health = getDerived(state, "client_account", account.account_id, "health_score");
-                        const risk = getDerived(state, "client_account", account.account_id, "renewal_risk_score");
-                        const segment = getDerived(state, "client_account", account.account_id, "segment_tag");
-                        return {
-                          key: account.account_id,
-                          Account: account.account_name,
-                          Industry: account.industry,
-                          Region: account.region,
-                          Segment: segment?.value ?? account.segment_tag,
-                          Health: health?.value ?? account.health_score,
-                          "Renewal risk": risk?.value ?? account.renewal_risk_score,
-                          "Total value": formatNumber(account.total_contract_value_to_date),
-                          "Estimated LTV": formatNumber(account.estimated_ltv),
-                          onClick: () =>
-                            handleSelectObject({
-                              page: "portfolio",
-                              objectType: "client_account",
-                              objectId: account.account_id,
-                            }),
-                        };
-                      })}
-                    />
+                    <div className="table-toolbar">
+                      <div className="toolbar-group">
+                        <div className="toolbar-block">
+                          <span>Saved view</span>
+                          <Select value={portfolioView} onValueChange={handlePortfolioViewChange}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select view" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {portfolioSavedViews.map((view) => (
+                                <SelectItem key={view.name} value={view.name}>
+                                  {view.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button variant="ghost" onClick={handlePortfolioSaveView} disabled={isViewer}>
+                            Save view
+                          </Button>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Group by</span>
+                          <Select value={portfolioGroupBy} onValueChange={setPortfolioGroupBy}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              <SelectItem value="region">Region</SelectItem>
+                              <SelectItem value="segment">Segment</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Health</span>
+                          <Select
+                            value={portfolioFilters.health}
+                            onValueChange={(value) => handlePortfolioFilterChange("health", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All health" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {portfolioFilterOptions.health.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Risk</span>
+                          <Select
+                            value={portfolioFilters.risk}
+                            onValueChange={(value) => handlePortfolioFilterChange("risk", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All risk" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {portfolioFilterOptions.risk.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Missing data</span>
+                          <Select
+                            value={portfolioFilters.missing}
+                            onValueChange={(value) => handlePortfolioFilterChange("missing", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All data" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {portfolioFilterOptions.missing.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="toolbar-group">
+                        <div className="selection-toggle" onClick={(event) => event.stopPropagation()}>
+                          <Checkbox
+                            checked={allPortfolioSelected}
+                            onCheckedChange={(checked) => togglePortfolioSelectAll(Boolean(checked))}
+                            disabled={isViewer}
+                          />
+                          <span>
+                            Select all ({portfolioAccountIds.length})
+                          </span>
+                        </div>
+                        <span className="selection-summary">
+                          Selected: {selectedPortfolioAccounts.length}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setSelectedPortfolioAccounts([])}
+                          disabled={isViewer || selectedPortfolioAccounts.length === 0}
+                        >
+                          Clear selection
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="column-picker">
+                      <span>Columns</span>
+                      <div className="column-grid">
+                        {PORTFOLIO_COLUMNS.filter((column) => column !== "Select").map((column) => (
+                          <label key={column}>
+                            <Checkbox
+                              checked={portfolioColumns.includes(column)}
+                              onCheckedChange={() => handlePortfolioColumnToggle(column)}
+                            />
+                            {column}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <DataTable columns={visiblePortfolioColumns} rows={portfolioTableRows} />
+                    <div className="table-actions">
+                      <div>
+                        <h4>Bulk actions</h4>
+                        <p className="help-text">Apply owner assignments or tasks to the selected accounts.</p>
+                        <div className="button-row">
+                          {portfolioBulkActions.map((action) => (
+                            <Button
+                              key={action.id}
+                              onClick={() => handlePortfolioAction(action)}
+                              disabled={isViewer || selectedPortfolioAccounts.length === 0}
+                            >
+                              {toTitle(action.id)}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Exports & scheduling</h4>
+                        <p className="help-text">
+                          Schedule recurring exports or generate one-off reports.
+                        </p>
+                        <div className="button-row">
+                          {portfolioExportActions.map((action) => (
+                            <Button key={action.id} variant="ghost" onClick={() => handlePortfolioAction(action)}>
+                              {toTitle(action.id)}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </Card>
                 </div>
                 <ObjectViewPanel
