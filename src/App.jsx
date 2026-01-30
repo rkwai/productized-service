@@ -53,6 +53,84 @@ const useHashRoute = () => {
 
 const formatNumber = (value) =>
   Number.isFinite(value) ? value.toLocaleString() : value ?? "—";
+const formatDelta = (value) => {
+  if (!Number.isFinite(value)) return "—";
+  const rounded = Math.round(value);
+  return `${rounded > 0 ? "+" : ""}${rounded}`;
+};
+const formatDays = (value) => (Number.isFinite(value) ? `${value}d` : "—");
+const getHealthTone = (value) => {
+  if (!Number.isFinite(value)) return "status-pill--neutral";
+  if (value >= 75) return "status-pill--good";
+  if (value >= 55) return "status-pill--warn";
+  return "status-pill--bad";
+};
+const getRiskTone = (value) => {
+  if (!Number.isFinite(value)) return "status-pill--neutral";
+  if (value >= 70) return "status-pill--bad";
+  if (value >= 45) return "status-pill--warn";
+  return "status-pill--good";
+};
+const getFreshnessTone = (value) => {
+  if (!Number.isFinite(value)) return "status-pill--neutral";
+  if (value <= 14) return "status-pill--good";
+  if (value <= 30) return "status-pill--warn";
+  return "status-pill--bad";
+};
+const StatusPill = ({ label, tone }) => <span className={`status-pill ${tone}`}>{label}</span>;
+const PORTFOLIO_COLUMNS = [
+  "Select",
+  "Account",
+  "Industry",
+  "Region",
+  "Segment",
+  "Health",
+  "Renewal risk",
+  "Churn risk",
+  "Data freshness",
+  "Missing data",
+  "Total value",
+  "Estimated LTV",
+  "LTV at risk",
+];
+const PORTFOLIO_VIEW_PRESETS = [
+  {
+    name: "Default",
+    groupBy: "none",
+    filters: { health: "all", risk: "all", missing: "all" },
+    columns: PORTFOLIO_COLUMNS,
+  },
+  {
+    name: "High Risk Focus",
+    groupBy: "region",
+    filters: { health: "all", risk: "high", missing: "all" },
+    columns: PORTFOLIO_COLUMNS.filter((column) =>
+      ["Select", "Account", "Region", "Health", "Renewal risk", "Churn risk", "Data freshness", "LTV at risk"].includes(column)
+    ),
+  },
+  {
+    name: "Data Gaps",
+    groupBy: "segment",
+    filters: { health: "all", risk: "all", missing: "gaps" },
+    columns: PORTFOLIO_COLUMNS.filter((column) =>
+      ["Select", "Account", "Segment", "Region", "Missing data", "Data freshness", "Health"].includes(column)
+    ),
+  },
+];
+
+const getHealthStatus = (score) => {
+  if (score >= 80) {
+    return { label: "Healthy", className: "border border-emerald-200 bg-emerald-100 text-emerald-800" };
+  }
+  if (score >= 65) {
+    return { label: "Watch", className: "border border-amber-200 bg-amber-100 text-amber-800" };
+  }
+  return { label: "Low", className: "border border-rose-200 bg-rose-100 text-rose-800" };
+};
+
+const clampScore = (value) => Math.max(0, Math.min(100, Math.round(value)));
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 const getDaysBetween = (startDate, endDate) =>
   Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
@@ -242,6 +320,36 @@ const ObjectListPanel = ({ state, objectTypeId, onUpdateRecord, onDeleteRecord, 
   const referenceMap = buildReferenceMap(state.config, state.instances);
   const isViewer = state.role === "Viewer";
 
+  const portfolioBulkActions = [
+    {
+      id: "assign_owner",
+      description: "Assign a primary owner to the selected accounts.",
+      parameters: ["owner", "account_ids"],
+      side_effects: ["update_account_owner", "notify_owner"],
+    },
+    {
+      id: "create_task",
+      description: "Create a follow-up task tied to the selected accounts.",
+      parameters: ["task_title", "due_date", "account_ids"],
+      side_effects: ["create_task", "notify_account_team"],
+    },
+  ];
+
+  const portfolioExportActions = [
+    {
+      id: "schedule_export",
+      description: "Schedule a recurring export or portfolio report.",
+      parameters: ["export_type", "frequency", "recipients"],
+      side_effects: ["schedule_export_job", "email_report"],
+    },
+    {
+      id: "generate_export",
+      description: "Generate an on-demand portfolio export.",
+      parameters: ["export_type", "format", "recipients"],
+      side_effects: ["generate_export", "deliver_export"],
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="card-grid">
@@ -272,17 +380,151 @@ const KpiCard = ({ label, value, helper }) => (
   </div>
 );
 
-const ChartCard = ({ title, description }) => (
+const ChartCard = ({ title, description, children }) => (
   <Card className="chart-card">
     <CardHeader>
       <CardTitle>{title}</CardTitle>
       {description ? <CardDescription>{description}</CardDescription> : null}
     </CardHeader>
     <CardContent>
-      <div className="chart-placeholder">Chart placeholder</div>
+      {children ?? <div className="chart-placeholder">Chart placeholder</div>}
     </CardContent>
   </Card>
 );
+
+const TrendIndicator = ({ value }) => {
+  const direction = value > 0 ? "up" : value < 0 ? "down" : "flat";
+  const label = `${value > 0 ? "+" : ""}${value} pts vs last period`;
+  return <span className={`trend-indicator ${direction}`}>{label}</span>;
+};
+
+const RiskValueScatter = ({ data }) => {
+  const width = 360;
+  const height = 200;
+  const padding = 30;
+  const maxValue = Math.max(...data.map((point) => point.value), 1);
+  const segments = Array.from(new Set(data.map((point) => point.segment))).filter(Boolean);
+  const palette = ["#2563eb", "#16a34a", "#f97316", "#7c3aed"];
+  const colorFor = (segment) => {
+    const index = Math.max(segments.indexOf(segment), 0);
+    return palette[index % palette.length];
+  };
+
+  return (
+    <div className="chart-body">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Risk vs value scatter plot">
+        <rect x="0" y="0" width={width} height={height} rx="12" fill="var(--secondary)" />
+        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="var(--border-color)" />
+        <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="var(--border-color)" />
+        {[25, 50, 75].map((tick) => (
+          <line
+            key={`x-${tick}`}
+            x1={padding + ((width - padding * 2) * tick) / 100}
+            y1={height - padding}
+            x2={padding + ((width - padding * 2) * tick) / 100}
+            y2={padding}
+            stroke="var(--border-color)"
+            strokeDasharray="4 4"
+          />
+        ))}
+        {data.map((point) => {
+          const x = padding + ((width - padding * 2) * point.risk) / 100;
+          const y =
+            height -
+            padding -
+            ((height - padding * 2) * point.value) / maxValue;
+          return (
+            <circle
+              key={point.id}
+              cx={x}
+              cy={y}
+              r={6}
+              fill={colorFor(point.segment)}
+              stroke="white"
+              strokeWidth="2"
+            />
+          );
+        })}
+        <text x={padding} y={height - 8} fontSize="10" fill="var(--muted-text)">
+          Lower risk
+        </text>
+        <text x={width - padding - 40} y={height - 8} fontSize="10" fill="var(--muted-text)">
+          Higher risk
+        </text>
+        <text x={8} y={padding - 8} fontSize="10" fill="var(--muted-text)">
+          Contract value
+        </text>
+      </svg>
+      <div className="chart-legend">
+        {segments.map((segment) => (
+          <div key={segment} className="legend-item">
+            <span className="legend-dot" style={{ background: colorFor(segment) }} />
+            {segment}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const HealthTrendChart = ({ data }) => {
+  const width = 360;
+  const height = 200;
+  const padding = 30;
+  const minValue = Math.min(...data.map((point) => point.value), 0);
+  const maxValue = Math.max(...data.map((point) => point.value), 100);
+  const range = maxValue - minValue || 1;
+  const step = (width - padding * 2) / (data.length - 1);
+  const points = data.map((point, index) => {
+    const x = padding + index * step;
+    const y = height - padding - ((point.value - minValue) / range) * (height - padding * 2);
+    return { ...point, x, y };
+  });
+  const path = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .join(" ");
+
+  return (
+    <div className="chart-body">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Portfolio health trend line">
+        <rect x="0" y="0" width={width} height={height} rx="12" fill="var(--secondary)" />
+        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="var(--border-color)" />
+        <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="var(--border-color)" />
+        {[25, 50, 75].map((tick) => (
+          <line
+            key={`y-${tick}`}
+            x1={padding}
+            y1={height - padding - ((height - padding * 2) * tick) / 100}
+            x2={width - padding}
+            y2={height - padding - ((height - padding * 2) * tick) / 100}
+            stroke="var(--border-color)"
+            strokeDasharray="4 4"
+          />
+        ))}
+        <path d={path} fill="none" stroke="#2563eb" strokeWidth="3" />
+        {points.map((point) => (
+          <circle key={point.label} cx={point.x} cy={point.y} r={5} fill="#2563eb" stroke="white" strokeWidth="2" />
+        ))}
+        {points.map((point) => (
+          <text
+            key={`${point.label}-label`}
+            x={point.x}
+            y={height - 8}
+            fontSize="10"
+            textAnchor="middle"
+            fill="var(--muted-text)"
+          >
+            {point.label}
+          </text>
+        ))}
+      </svg>
+      <div className="trend-summary">
+        <span className="trend-current">{data[data.length - 1]?.value ?? 0}%</span>
+        <span className="trend-note">Current portfolio health score</span>
+      </div>
+    </div>
+  );
+};
 
 const DataTable = ({ columns, rows, onRowClick }) => (
   <div className="table-wrapper">
@@ -726,7 +968,14 @@ const App = () => {
     engagement: "",
     dateRange: "",
   });
+  const [homeTopRiskOnly, setHomeTopRiskOnly] = useState(false);
   const [actionSheet, setActionSheet] = useState(null);
+  const [portfolioSavedViews, setPortfolioSavedViews] = useState(PORTFOLIO_VIEW_PRESETS);
+  const [portfolioView, setPortfolioView] = useState(PORTFOLIO_VIEW_PRESETS[0].name);
+  const [portfolioGroupBy, setPortfolioGroupBy] = useState(PORTFOLIO_VIEW_PRESETS[0].groupBy);
+  const [portfolioFilters, setPortfolioFilters] = useState(PORTFOLIO_VIEW_PRESETS[0].filters);
+  const [portfolioColumns, setPortfolioColumns] = useState(PORTFOLIO_VIEW_PRESETS[0].columns);
+  const [selectedPortfolioAccounts, setSelectedPortfolioAccounts] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -901,6 +1150,45 @@ const App = () => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handlePortfolioViewChange = (value) => {
+    const view = portfolioSavedViews.find((item) => item.name === value);
+    if (!view) return;
+    setPortfolioView(view.name);
+    setPortfolioGroupBy(view.groupBy);
+    setPortfolioFilters(view.filters);
+    setPortfolioColumns(view.columns);
+  };
+
+  const handlePortfolioFilterChange = (key, value) => {
+    setPortfolioFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handlePortfolioColumnToggle = (column) => {
+    setPortfolioColumns((prev) =>
+      prev.includes(column) ? prev.filter((item) => item !== column) : [...prev, column]
+    );
+  };
+
+  const handlePortfolioSaveView = () => {
+    const name = window.prompt("Name this view");
+    if (!name) return;
+    const newView = {
+      name,
+      groupBy: portfolioGroupBy,
+      filters: portfolioFilters,
+      columns: portfolioColumns,
+    };
+    setPortfolioSavedViews((prev) => [...prev.filter((view) => view.name !== name), newView]);
+    setPortfolioView(name);
+  };
+
+  const handlePortfolioAction = (action) => {
+    setActionSheet({
+      action,
+      context: { account_ids: selectedPortfolioAccounts.join(", ") },
+    });
+  };
+
   const handleSelectObject = ({ page, objectType, objectId }) => {
     window.location.hash = toHashHref({ page, objectType, objectId });
   };
@@ -936,6 +1224,9 @@ const App = () => {
   const meetings = state?.instances.meeting || [];
   const decisions = state?.instances.decision || [];
   const changeRequests = state?.instances.change_request || [];
+  const stakeholders = state?.instances.stakeholder || [];
+  const teamMembers = state?.instances.team_member || [];
+  const statementsOfWork = state?.instances.statement_of_work || [];
   const metrics = state?.instances.kpi_metric || [];
   const snapshots = state?.instances.kpi_snapshot || [];
 
@@ -1013,7 +1304,12 @@ const App = () => {
       milestone: ["replan_milestone", "escalate_risk_issue"],
       risk_issue: ["escalate_risk_issue"],
       change_request: ["initiate_change_request"],
-      consulting_engagement: ["schedule_steering_committee", "publish_exec_readout", "run_value_realization_workshop"],
+      consulting_engagement: [
+        "schedule_steering_committee",
+        "publish_exec_readout",
+        "run_value_realization_workshop",
+        "launch_recovery_playbook",
+      ],
       outcome: ["run_value_realization_workshop"],
     };
     const actions = relevant[selectedObjectType] || [];
@@ -1062,43 +1358,180 @@ const App = () => {
 
   const isViewer = state.role === "Viewer";
 
-  const attentionAccounts = accounts
-    .map((account) => ({
-      account,
-      health: getDerived(state, "client_account", account.account_id, "health_score"),
-      risk: getDerived(state, "client_account", account.account_id, "renewal_risk_score"),
-      segment: getDerived(state, "client_account", account.account_id, "segment_tag"),
-    }))
-    .sort((a, b) => (b.risk?.value || 0) - (a.risk?.value || 0))
-    .slice(0, 4);
+  const RENEWAL_RISK_THRESHOLD = 70;
+  const MILESTONE_AT_RISK_WINDOW_DAYS = 14;
+  const now = new Date();
 
-  const avgHealth = accounts.length
+  const isMilestoneAtRisk = (milestone) => {
+    if (!milestone?.due_date || milestone.status === "Completed") return false;
+    const dueDate = new Date(milestone.due_date);
+    const daysToDue = (dueDate - now) / (1000 * 60 * 60 * 24);
+    return (
+      daysToDue <= MILESTONE_AT_RISK_WINDOW_DAYS ||
+      getDerived(state, "milestone", milestone.milestone_id, "at_risk_flag")?.value
+    );
+  };
+
+  const workstreamById = new Map(workstreams.map((workstream) => [workstream.workstream_id, workstream]));
+  const engagementById = new Map(engagements.map((engagement) => [engagement.engagement_id, engagement]));
+  const milestonesByAccountId = new Map();
+  milestones.forEach((milestone) => {
+    const workstream = workstreamById.get(milestone.workstream_id);
+    const engagement = workstream ? engagementById.get(workstream.engagement_id) : null;
+    if (!engagement) return;
+    const list = milestonesByAccountId.get(engagement.account_id) ?? [];
+    list.push(milestone);
+    milestonesByAccountId.set(engagement.account_id, list);
+  });
+  const highRisksByAccountId = new Map();
+  risks.forEach((risk) => {
+    if (risk.severity !== "High" || risk.status === "Resolved") return;
+    const engagement = engagementById.get(risk.engagement_id);
+    if (!engagement) return;
+    const list = highRisksByAccountId.get(engagement.account_id) ?? [];
+    list.push(risk);
+    highRisksByAccountId.set(engagement.account_id, list);
+  });
+
+  const filteredAccounts = accounts.filter((account) => {
+    const segmentValue =
+      getDerived(state, "client_account", account.account_id, "segment_tag")?.value || account.segment_tag;
+    const regionMatches = !filters.region || account.region === filters.region;
+    const segmentMatches = !filters.segment || segmentValue === filters.segment;
+    const accountMatches = !filters.account || account.account_name === filters.account;
+    return regionMatches && segmentMatches && accountMatches;
+  });
+
+  const accountInsights = filteredAccounts.map((account) => {
+    const health = getDerived(state, "client_account", account.account_id, "health_score");
+    const risk = getDerived(state, "client_account", account.account_id, "renewal_risk_score");
+    const segment = getDerived(state, "client_account", account.account_id, "segment_tag");
+    const accountMilestones = milestonesByAccountId.get(account.account_id) ?? [];
+    const atRiskMilestoneCount = accountMilestones.filter(isMilestoneAtRisk).length;
+    const highRiskCount = highRisksByAccountId.get(account.account_id)?.length ?? 0;
+    return {
+      account,
+      health,
+      risk,
+      segment,
+      atRiskMilestoneCount,
+      highRiskCount,
+    };
+  });
+
+  const attentionCandidates = accountInsights
+    .filter(
+      ({ risk, atRiskMilestoneCount, highRiskCount }) =>
+        (risk?.value || 0) >= RENEWAL_RISK_THRESHOLD ||
+        atRiskMilestoneCount > 0 ||
+        highRiskCount > 0
+    )
+    .sort((a, b) => (b.risk?.value || 0) - (a.risk?.value || 0));
+
+  const accountsAboveRiskThreshold = accountInsights.filter(
+    ({ risk }) => (risk?.value || 0) >= RENEWAL_RISK_THRESHOLD
+  ).length;
+
+  const attentionAccounts = homeTopRiskOnly
+    ? [...accountInsights].sort((a, b) => (b.risk?.value || 0) - (a.risk?.value || 0)).slice(0, 10)
+    : attentionCandidates.slice(0, 6);
+
+  const avgHealth = filteredAccounts.length
     ? Math.round(
-        accounts.reduce(
+        filteredAccounts.reduce(
           (sum, account) =>
             sum + (getDerived(state, "client_account", account.account_id, "health_score")?.value || 0),
           0
-        ) / accounts.length
+        ) / filteredAccounts.length
       )
     : 0;
 
-  const avgRisk = accounts.length
+  const avgRisk = filteredAccounts.length
     ? Math.round(
-        accounts.reduce(
+        filteredAccounts.reduce(
           (sum, account) =>
             sum + (getDerived(state, "client_account", account.account_id, "renewal_risk_score")?.value || 0),
           0
-        ) / accounts.length
+        ) / filteredAccounts.length
       )
     : 0;
+
+  const freshAccounts = accountSignals.filter((item) => Number.isFinite(item.freshnessDays) && item.freshnessDays <= 30)
+    .length;
+  const missingDataAccounts = accountSignals.filter((item) => item.missingFields.length).length;
+
+  const buildBreakdown = (items, keyFn) => {
+    const groups = items.reduce((acc, item) => {
+      const key = keyFn(item) || "Unassigned";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+    return Object.entries(groups).map(([key, group]) => {
+      const avgHealthScore = Math.round(group.reduce((sum, item) => sum + (item.healthValue || 0), 0) / group.length);
+      const avgRiskScore = Math.round(group.reduce((sum, item) => sum + (item.riskValue || 0), 0) / group.length);
+      return {
+        key,
+        count: group.length,
+        avgHealthScore,
+        avgRiskScore,
+        healthDelta: avgHealthScore - avgHealth,
+        riskDelta: avgRiskScore - avgRisk,
+      };
+    });
+  };
+
+  const segmentBreakdown = useMemo(
+    () => buildBreakdown(accountSignals, (item) => item.segmentValue),
+    [accountSignals, avgHealth, avgRisk]
+  );
+
+  const regionBreakdown = useMemo(
+    () => buildBreakdown(accountSignals, (item) => item.account.region),
+    [accountSignals, avgHealth, avgRisk]
+  );
+
+  const segmentCohortRows = segmentBreakdown.map((segment) => ({
+    key: `segment-${segment.key}`,
+    Cohort: segment.key,
+    Accounts: segment.count,
+    "Avg health": (
+      <div className="delta-cell">
+        <StatusPill label={segment.avgHealthScore} tone={getHealthTone(segment.avgHealthScore)} />
+        <span>{formatDelta(segment.healthDelta)}</span>
+      </div>
+    ),
+    "Avg risk": (
+      <div className="delta-cell">
+        <StatusPill label={segment.avgRiskScore} tone={getRiskTone(segment.avgRiskScore)} />
+        <span>{formatDelta(segment.riskDelta)}</span>
+      </div>
+    ),
+  }));
+
+  const regionCohortRows = regionBreakdown.map((region) => ({
+    key: `region-${region.key}`,
+    Cohort: region.key,
+    Accounts: region.count,
+    "Avg health": (
+      <div className="delta-cell">
+        <StatusPill label={region.avgHealthScore} tone={getHealthTone(region.avgHealthScore)} />
+        <span>{formatDelta(region.healthDelta)}</span>
+      </div>
+    ),
+    "Avg risk": (
+      <div className="delta-cell">
+        <StatusPill label={region.avgRiskScore} tone={getRiskTone(region.avgRiskScore)} />
+        <span>{formatDelta(region.riskDelta)}</span>
+      </div>
+    ),
+  }));
 
   const onTrackOutcomes = (state.instances.outcome || []).filter(
     (outcome) => (getDerived(state, "outcome", outcome.outcome_id, "progress_pct")?.value || 0) >= 0.6
   ).length;
 
-  const atRiskMilestones = milestones.filter(
-    (milestone) => getDerived(state, "milestone", milestone.milestone_id, "at_risk_flag")?.value
-  ).length;
+  const atRiskMilestones = milestones.filter(isMilestoneAtRisk).length;
 
   const openHighRisks = risks.filter((risk) => risk.severity === "High" && risk.status !== "Resolved").length;
 
@@ -1188,6 +1621,172 @@ const App = () => {
     engagements: engagements.map((engagement) => engagement.engagement_name),
   };
 
+  const portfolioFilterOptions = {
+    health: [
+      { label: "All", value: "all" },
+      { label: "Healthy", value: "healthy" },
+      { label: "Needs attention", value: "watch" },
+      { label: "Critical", value: "critical" },
+    ],
+    risk: [
+      { label: "All", value: "all" },
+      { label: "Low", value: "low" },
+      { label: "Medium", value: "medium" },
+      { label: "High", value: "high" },
+    ],
+    missing: [
+      { label: "All", value: "all" },
+      { label: "Only gaps", value: "gaps" },
+      { label: "Complete", value: "complete" },
+    ],
+  };
+
+  const portfolioHealthTier = (value) => {
+    if (!Number.isFinite(value)) return "critical";
+    if (value >= 75) return "healthy";
+    if (value >= 55) return "watch";
+    return "critical";
+  };
+
+  const portfolioRiskTier = (value) => {
+    if (!Number.isFinite(value)) return "high";
+    if (value >= 70) return "high";
+    if (value >= 45) return "medium";
+    return "low";
+  };
+
+  const portfolioFilteredAccounts = accountSignals.filter((item) => {
+    if (portfolioFilters.health !== "all" && portfolioHealthTier(item.healthValue) !== portfolioFilters.health) {
+      return false;
+    }
+    if (portfolioFilters.risk !== "all" && portfolioRiskTier(item.riskValue) !== portfolioFilters.risk) {
+      return false;
+    }
+    const missingTier = item.missingFields.length ? "gaps" : "complete";
+    if (portfolioFilters.missing !== "all" && missingTier !== portfolioFilters.missing) {
+      return false;
+    }
+    return true;
+  });
+
+  const portfolioAccountIds = portfolioFilteredAccounts.map((item) => item.account.account_id);
+  const allPortfolioSelected =
+    portfolioAccountIds.length > 0 &&
+    portfolioAccountIds.every((id) => selectedPortfolioAccounts.includes(id));
+
+  const setPortfolioSelection = (accountId, checked) => {
+    setSelectedPortfolioAccounts((prev) => {
+      if (checked) {
+        return prev.includes(accountId) ? prev : [...prev, accountId];
+      }
+      return prev.filter((item) => item !== accountId);
+    });
+  };
+
+  const togglePortfolioSelectAll = (checked) => {
+    setSelectedPortfolioAccounts(checked ? portfolioAccountIds : []);
+  };
+
+  const visiblePortfolioColumns = PORTFOLIO_COLUMNS.filter((column) => portfolioColumns.includes(column));
+
+  const portfolioGroupedRows = useMemo(() => {
+    if (portfolioGroupBy === "none") {
+      return portfolioFilteredAccounts.map((item) => ({ type: "row", item }));
+    }
+    const groupKey = portfolioGroupBy === "region" ? "region" : "segment";
+    const groups = portfolioFilteredAccounts.reduce((acc, item) => {
+      const key = groupKey === "region" ? item.account.region || "Unassigned" : item.segmentValue || "Unassigned";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+    return Object.entries(groups).flatMap(([key, items]) => [
+      { type: "group", key, count: items.length },
+      ...items.map((item) => ({ type: "row", item })),
+    ]);
+  }, [portfolioFilteredAccounts, portfolioGroupBy]);
+
+  const portfolioTableRows = useMemo(
+    () =>
+      portfolioGroupedRows.map((entry) => {
+        if (entry.type === "group") {
+          return {
+            key: `group-${entry.key}`,
+            className: "table-group-row",
+            Select: "",
+            Account: (
+              <div className="group-label">
+                <strong>{portfolioGroupBy === "region" ? "Region" : "Segment"}:</strong> {entry.key}
+                <span>{entry.count} accounts</span>
+              </div>
+            ),
+            Industry: "",
+            Region: "",
+            Segment: "",
+            Health: "",
+            "Renewal risk": "",
+            "Churn risk": "",
+            "Data freshness": "",
+            "Missing data": "",
+            "Total value": "",
+            "Estimated LTV": "",
+            "LTV at risk": "",
+          };
+        }
+        const { account, healthValue, riskValue, churnValue, freshnessDays, missingFields, ltvAtRisk, segmentValue } =
+          entry.item;
+        const isSelected = selectedPortfolioAccounts.includes(account.account_id);
+        return {
+          key: account.account_id,
+          Select: (
+            <div className="checkbox-cell" onClick={(event) => event.stopPropagation()}>
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={(checked) => setPortfolioSelection(account.account_id, Boolean(checked))}
+                disabled={isViewer}
+                aria-label={`Select ${account.account_name}`}
+              />
+            </div>
+          ),
+          Account: account.account_name,
+          Industry: account.industry,
+          Region: account.region,
+          Segment: segmentValue,
+          Health: <StatusPill label={healthValue ?? "—"} tone={getHealthTone(healthValue)} />,
+          "Renewal risk": <StatusPill label={riskValue ?? "—"} tone={getRiskTone(riskValue)} />,
+          "Churn risk": <StatusPill label={churnValue ?? "—"} tone={getRiskTone(churnValue)} />,
+          "Data freshness": (
+            <StatusPill label={formatDays(freshnessDays)} tone={getFreshnessTone(freshnessDays)} />
+          ),
+          "Missing data": missingFields.length ? (
+            <div className="missing-data">
+              <StatusPill label={`${missingFields.length} gaps`} tone="status-pill--warn" />
+              <span>{missingFields.slice(0, 2).map(toTitle).join(", ")}</span>
+            </div>
+          ) : (
+            <StatusPill label="Complete" tone="status-pill--good" />
+          ),
+          "Total value": formatNumber(account.total_contract_value_to_date),
+          "Estimated LTV": formatNumber(account.estimated_ltv),
+          "LTV at risk": formatNumber(ltvAtRisk),
+          onClick: () =>
+            handleSelectObject({
+              page: "portfolio",
+              objectType: "client_account",
+              objectId: account.account_id,
+            }),
+        };
+      }),
+    [
+      handleSelectObject,
+      isViewer,
+      portfolioGroupBy,
+      portfolioGroupedRows,
+      selectedPortfolioAccounts,
+      setPortfolioSelection,
+    ]
+  );
+
   const configMetadata = {
     company_name: state.config.client_metadata.company_name,
     primary_objective: state.config.client_metadata.primary_objective,
@@ -1258,6 +1857,20 @@ const App = () => {
         })),
     },
     {
+      id: "critical-engagements",
+      label: "Critical engagements (low health)",
+      rows: lowHealthEngagements.map((signal) => ({
+        key: signal.id,
+        objectType: "consulting_engagement",
+        objectId: signal.id,
+        name: signal.name,
+        status: `${signal.healthScore} health`,
+        due: formatDate(signal.renewalDate),
+        owner: signal.owner,
+        action: "launch_recovery_playbook",
+      })),
+    },
+    {
       id: "renewal-collections",
       label: "Renewal upcoming + collections issues",
       rows: engagements
@@ -1294,6 +1907,10 @@ const App = () => {
         })),
     },
   ];
+
+  const slaBreachCount = actionQueues.find((queue) => queue.id === "at-risk-milestones")?.rows.length || 0;
+  const criticalBlockerCount = actionQueues.find((queue) => queue.id === "high-severity-risks")?.rows.length || 0;
+  const recoveryQueueCount = actionQueues.find((queue) => queue.id === "critical-engagements")?.rows.length || 0;
 
   return (
     <div className="app-shell">
@@ -1368,54 +1985,207 @@ const App = () => {
               <PageHeader
                 title="Home / Executive Summary"
                 description="Portfolio-level signals for renewal readiness, delivery reliability, and value realization."
-                action={<div className="pill">Executive Summary</div>}
+                action={
+                  <div className="page-actions">
+                    <div className="pill">Executive Summary</div>
+                    <button
+                      type="button"
+                      className={`filter-chip ${homeTopRiskOnly ? "active" : ""}`}
+                      onClick={() => setHomeTopRiskOnly((prev) => !prev)}
+                    >
+                      Top 10 at-risk
+                    </button>
+                  </div>
+                }
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
-              <div className="kpi-row">
-                <KpiCard label="# Active Accounts" value={accounts.length} />
-                <KpiCard label="Avg Account Health" value={avgHealth} />
-                <KpiCard label="Avg Renewal Risk" value={avgRisk} />
-                <KpiCard label="# At-Risk Milestones" value={atRiskMilestones} />
-                <KpiCard label="# Open High Severity Risks" value={openHighRisks} />
-                <KpiCard label="# Overdue Invoices" value={overdueInvoices} />
-                <KpiCard label="Outcomes On Track" value={onTrackOutcomes} />
+              <div className="kpi-groups">
+                <div className="kpi-group">
+                  <div className="kpi-group-header">
+                    <h3>Portfolio health</h3>
+                    <p>Weighted score across health, risk, milestones, and outcomes.</p>
+                  </div>
+                  <div className="kpi-row">
+                    <KpiCard
+                      label="Portfolio Health Score"
+                      value={`${portfolioHealthScore}%`}
+                      helper={<TrendIndicator value={portfolioHealthTrend} />}
+                    />
+                    <KpiCard label="# Active Accounts" value={filteredAccounts.length} />
+                    <KpiCard label="Avg Account Health" value={avgHealth} />
+                    <KpiCard label="Outcomes On Track" value={onTrackOutcomes} />
+                  </div>
+                </div>
+                <div className="kpi-group">
+                  <div className="kpi-group-header">
+                    <h3>Renewal risk</h3>
+                    <p>Exposure to renewal slippage across top accounts.</p>
+                  </div>
+                  <div className="kpi-row">
+                    <KpiCard label="Avg Renewal Risk" value={avgRisk} />
+                    <KpiCard
+                      label="Pipeline Risk Exposure"
+                      value={`$${formatNumber(pipelineRiskExposure)}`}
+                      helper="Top 5 accounts above risk threshold."
+                    />
+                    <KpiCard label="# Accounts Above Risk Threshold" value={accountsAboveRiskThreshold} />
+                  </div>
+                </div>
+                <div className="kpi-group">
+                  <div className="kpi-group-header">
+                    <h3>Delivery & finance</h3>
+                    <p>Commitments and collections requiring escalation.</p>
+                  </div>
+                  <div className="kpi-row">
+                    <KpiCard label="# At-Risk Milestones" value={atRiskMilestones} />
+                    <KpiCard label="# Open High Severity Risks" value={openHighRisks} />
+                    <KpiCard label="# Overdue Invoices" value={overdueInvoices} />
+                  </div>
+                </div>
               </div>
+              <Card className="panel formula-card">
+                <h3>Portfolio health definition</h3>
+                <p>
+                  Weighted score = 40% average health + 25% inverse renewal risk + 20% milestone reliability + 15%
+                  outcome confidence. Reliability = 100 - (% milestones at risk).
+                </p>
+                <div className="formula-meta">
+                  <div>
+                    <strong>At-risk milestone threshold</strong>
+                    <span>Due in ≤ {MILESTONE_AT_RISK_WINDOW_DAYS} days or flagged at risk.</span>
+                  </div>
+                  <div>
+                    <strong>Renewal risk threshold</strong>
+                    <span>Score ≥ {RENEWAL_RISK_THRESHOLD} triggers renewal risk alerts.</span>
+                  </div>
+                </div>
+              </Card>
               <div className="visual-grid">
                 <ChartCard
-                  title="LTV vs Renewal Risk"
-                  description="Size = total contract value; color = segment."
-                />
+                  title="Risk vs Value scatter"
+                  description="Renewal risk plotted against total contract value, colored by segment."
+                >
+                  <RiskValueScatter
+                    data={accountInsights.map(({ account, risk, segment }) => ({
+                      id: account.account_id,
+                      risk: risk?.value ?? 0,
+                      value: Number(account.total_contract_value_to_date || 0),
+                      segment: segment?.value ?? account.segment_tag ?? "Core",
+                    }))}
+                  />
+                </ChartCard>
                 <ChartCard
-                  title="Engagement Health Trend"
-                  description="Historical engagement health snapshots."
-                />
+                  title="Portfolio health trend"
+                  description="Trailing six checkpoints (simulated from current health drivers)."
+                >
+                  <HealthTrendChart
+                    data={[
+                      { label: "Apr", value: clamp(portfolioHealthScore - 12, 0, 100) },
+                      { label: "May", value: clamp(portfolioHealthScore - 8, 0, 100) },
+                      { label: "Jun", value: clamp(portfolioHealthScore - 5, 0, 100) },
+                      { label: "Jul", value: clamp(portfolioHealthScore - 3, 0, 100) },
+                      { label: "Aug", value: clamp(portfolioHealthScore - 1, 0, 100) },
+                      { label: "Sep", value: portfolioHealthScore },
+                    ]}
+                  />
+                </ChartCard>
               </div>
               <div className="module-grid">
                 <div className="module-main">
                   <Card className="panel">
-                    <h3>Accounts needing attention</h3>
+                    <div className="panel-header">
+                      <div>
+                        <h3>Accounts needing attention</h3>
+                        <p>
+                          {homeTopRiskOnly
+                            ? "Top 10 accounts by renewal risk score."
+                            : "Accounts above renewal or delivery risk thresholds."}
+                        </p>
+                      </div>
+                      <Badge variant="secondary">{attentionAccounts.length} accounts</Badge>
+                    </div>
                     <DataTable
                       columns={[
                         "Account",
                         "Health",
                         "Renewal risk",
+                        "Alerts",
                         "Segment",
                         "Value",
+                        "Quick actions",
                       ]}
-                      rows={attentionAccounts.map(({ account, health, risk, segment }) => ({
-                        key: account.account_id,
-                        Account: account.account_name,
-                        Health: health?.value ?? account.health_score,
-                        "Renewal risk": risk?.value ?? account.renewal_risk_score,
-                        Segment: segment?.value ?? account.segment_tag,
-                        Value: formatNumber(account.total_contract_value_to_date),
-                        onClick: () =>
-                          handleSelectObject({
-                            page: "home",
-                            objectType: "client_account",
-                            objectId: account.account_id,
-                          }),
-                      }))}
+                      rows={attentionAccounts.map(
+                        ({ account, health, risk, segment, atRiskMilestoneCount, highRiskCount }) => {
+                          const renewalRiskValue = risk?.value ?? account.renewal_risk_score;
+                          const alertBadges = [];
+                          if (renewalRiskValue >= RENEWAL_RISK_THRESHOLD) {
+                            alertBadges.push(
+                              <Badge key="renewal" className="alert-badge" variant="secondary">
+                                Renewal risk
+                              </Badge>
+                            );
+                          }
+                          if (atRiskMilestoneCount > 0) {
+                            alertBadges.push(
+                              <Badge key="milestone" className="alert-badge" variant="outline">
+                                {atRiskMilestoneCount} milestone{atRiskMilestoneCount > 1 ? "s" : ""} due
+                              </Badge>
+                            );
+                          }
+                          if (highRiskCount > 0) {
+                            alertBadges.push(
+                              <Badge key="risk" className="alert-badge danger" variant="outline">
+                                High severity risk
+                              </Badge>
+                            );
+                          }
+                          return {
+                            key: account.account_id,
+                            Account: account.account_name,
+                            Health: health?.value ?? account.health_score,
+                            "Renewal risk": renewalRiskValue,
+                            Alerts: <div className="alert-badges">{alertBadges}</div>,
+                            Segment: segment?.value ?? account.segment_tag,
+                            Value: formatNumber(account.total_contract_value_to_date),
+                            "Quick actions": (
+                              <div className="table-actions">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    const action = actionMap.publish_exec_readout;
+                                    if (action) {
+                                      setActionSheet({ action, context: account });
+                                    }
+                                  }}
+                                >
+                                  Open exec brief
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    const action = actionMap.escalate_risk_issue;
+                                    if (action) {
+                                      setActionSheet({ action, context: account });
+                                    }
+                                  }}
+                                >
+                                  Start escalation
+                                </Button>
+                              </div>
+                            ),
+                            onClick: () =>
+                              handleSelectObject({
+                                page: "home",
+                                objectType: "client_account",
+                                objectId: account.account_id,
+                              }),
+                          };
+                        }
+                      )}
                     />
                   </Card>
                 </div>
@@ -1441,55 +2211,233 @@ const App = () => {
                 <KpiCard label="# Accounts" value={accounts.length} />
                 <KpiCard label="Avg Health" value={avgHealth} />
                 <KpiCard label="Avg Renewal Risk" value={avgRisk} />
+                <KpiCard label="Avg Churn Risk" value={avgChurnRisk} />
                 <KpiCard
-                  label="Total Contract Value"
-                  value={formatNumber(
-                    accounts.reduce((sum, account) => sum + Number(account.total_contract_value_to_date || 0), 0)
-                  )}
+                  label="Data Freshness"
+                  value={formatDays(avgFreshnessDays)}
+                  helper={`${freshAccounts}/${accounts.length} updated <30d`}
+                />
+                <KpiCard
+                  label="LTV at Risk"
+                  value={formatNumber(totalLtvAtRisk)}
+                  helper={`${missingDataAccounts} accounts with data gaps`}
                 />
               </div>
+              <Card className="panel">
+                <h3>Cohort metrics</h3>
+                <p className="help-text">Segment and region cohorts with deltas vs portfolio averages.</p>
+                <div className="cohort-grid">
+                  <div>
+                    <h4>Segment cohorts</h4>
+                    <DataTable columns={["Cohort", "Accounts", "Avg health", "Avg risk"]} rows={segmentCohortRows} />
+                  </div>
+                  <div>
+                    <h4>Regional cohorts</h4>
+                    <DataTable columns={["Cohort", "Accounts", "Avg health", "Avg risk"]} rows={regionCohortRows} />
+                  </div>
+                </div>
+              </Card>
               <div className="visual-grid">
-                <ChartCard title="Health vs Risk Quadrant" />
-                <ChartCard title="Regional Breakdown" />
+                <ChartCard
+                  title="Segment breakdown"
+                  description="Account mix with average health and renewal risk."
+                >
+                  <div className="chart-breakdown">
+                    {segmentBreakdown.map((segment) => (
+                      <div key={segment.key} className="breakdown-row">
+                        <div>
+                          <strong>{segment.key}</strong>
+                          <span>{segment.count} accounts</span>
+                        </div>
+                        <div>
+                          <StatusPill label={`H ${segment.avgHealthScore}`} tone={getHealthTone(segment.avgHealthScore)} />
+                          <StatusPill label={`R ${segment.avgRiskScore}`} tone={getRiskTone(segment.avgRiskScore)} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+                <ChartCard title="Regional breakdown" description="Health and risk by region.">
+                  <div className="chart-breakdown">
+                    {regionBreakdown.map((region) => (
+                      <div key={region.key} className="breakdown-row">
+                        <div>
+                          <strong>{region.key}</strong>
+                          <span>{region.count} accounts</span>
+                        </div>
+                        <div>
+                          <StatusPill label={`H ${region.avgHealthScore}`} tone={getHealthTone(region.avgHealthScore)} />
+                          <StatusPill label={`R ${region.avgRiskScore}`} tone={getRiskTone(region.avgRiskScore)} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ChartCard>
+                <ChartCard
+                  title="Health vs Risk Quadrant"
+                  description="Quadrant view of portfolio health vs renewal risk."
+                />
               </div>
               <div className="module-grid">
                 <div className="module-main">
                   <Card className="panel">
                     <h3>Accounts</h3>
-                    <DataTable
-                      columns={[
-                        "Account",
-                        "Industry",
-                        "Region",
-                        "Segment",
-                        "Health",
-                        "Renewal risk",
-                        "Total value",
-                        "Estimated LTV",
-                      ]}
-                      rows={accounts.map((account) => {
-                        const health = getDerived(state, "client_account", account.account_id, "health_score");
-                        const risk = getDerived(state, "client_account", account.account_id, "renewal_risk_score");
-                        const segment = getDerived(state, "client_account", account.account_id, "segment_tag");
-                        return {
-                          key: account.account_id,
-                          Account: account.account_name,
-                          Industry: account.industry,
-                          Region: account.region,
-                          Segment: segment?.value ?? account.segment_tag,
-                          Health: health?.value ?? account.health_score,
-                          "Renewal risk": risk?.value ?? account.renewal_risk_score,
-                          "Total value": formatNumber(account.total_contract_value_to_date),
-                          "Estimated LTV": formatNumber(account.estimated_ltv),
-                          onClick: () =>
-                            handleSelectObject({
-                              page: "portfolio",
-                              objectType: "client_account",
-                              objectId: account.account_id,
-                            }),
-                        };
-                      })}
-                    />
+                    <div className="table-toolbar">
+                      <div className="toolbar-group">
+                        <div className="toolbar-block">
+                          <span>Saved view</span>
+                          <Select value={portfolioView} onValueChange={handlePortfolioViewChange}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select view" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {portfolioSavedViews.map((view) => (
+                                <SelectItem key={view.name} value={view.name}>
+                                  {view.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button variant="ghost" onClick={handlePortfolioSaveView} disabled={isViewer}>
+                            Save view
+                          </Button>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Group by</span>
+                          <Select value={portfolioGroupBy} onValueChange={setPortfolioGroupBy}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              <SelectItem value="region">Region</SelectItem>
+                              <SelectItem value="segment">Segment</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Health</span>
+                          <Select
+                            value={portfolioFilters.health}
+                            onValueChange={(value) => handlePortfolioFilterChange("health", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All health" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {portfolioFilterOptions.health.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Risk</span>
+                          <Select
+                            value={portfolioFilters.risk}
+                            onValueChange={(value) => handlePortfolioFilterChange("risk", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All risk" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {portfolioFilterOptions.risk.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Missing data</span>
+                          <Select
+                            value={portfolioFilters.missing}
+                            onValueChange={(value) => handlePortfolioFilterChange("missing", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All data" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {portfolioFilterOptions.missing.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="toolbar-group">
+                        <div className="selection-toggle" onClick={(event) => event.stopPropagation()}>
+                          <Checkbox
+                            checked={allPortfolioSelected}
+                            onCheckedChange={(checked) => togglePortfolioSelectAll(Boolean(checked))}
+                            disabled={isViewer}
+                          />
+                          <span>
+                            Select all ({portfolioAccountIds.length})
+                          </span>
+                        </div>
+                        <span className="selection-summary">
+                          Selected: {selectedPortfolioAccounts.length}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setSelectedPortfolioAccounts([])}
+                          disabled={isViewer || selectedPortfolioAccounts.length === 0}
+                        >
+                          Clear selection
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="column-picker">
+                      <span>Columns</span>
+                      <div className="column-grid">
+                        {PORTFOLIO_COLUMNS.filter((column) => column !== "Select").map((column) => (
+                          <label key={column}>
+                            <Checkbox
+                              checked={portfolioColumns.includes(column)}
+                              onCheckedChange={() => handlePortfolioColumnToggle(column)}
+                            />
+                            {column}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <DataTable columns={visiblePortfolioColumns} rows={portfolioTableRows} />
+                    <div className="table-actions">
+                      <div>
+                        <h4>Bulk actions</h4>
+                        <p className="help-text">Apply owner assignments or tasks to the selected accounts.</p>
+                        <div className="button-row">
+                          {portfolioBulkActions.map((action) => (
+                            <Button
+                              key={action.id}
+                              onClick={() => handlePortfolioAction(action)}
+                              disabled={isViewer || selectedPortfolioAccounts.length === 0}
+                            >
+                              {toTitle(action.id)}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4>Exports & scheduling</h4>
+                        <p className="help-text">
+                          Schedule recurring exports or generate one-off reports.
+                        </p>
+                        <div className="button-row">
+                          {portfolioExportActions.map((action) => (
+                            <Button key={action.id} variant="ghost" onClick={() => handlePortfolioAction(action)}>
+                              {toTitle(action.id)}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </Card>
                 </div>
                 <ObjectViewPanel
@@ -1562,30 +2510,141 @@ const App = () => {
                   )}
                 />
               </div>
+              <div className="card-grid">
+                {engagementSignals.map((signal) => (
+                  <Card key={signal.id} className="object-card">
+                    <header>
+                      <strong>{signal.name}</strong>
+                      <Badge className={signal.healthStatus.className}>{signal.healthStatus.label}</Badge>
+                    </header>
+                    <div className="summary-grid compact">
+                      <div className="summary-tile">
+                        <span className="label">Owner</span>
+                        <strong>{signal.owner || "—"}</strong>
+                      </div>
+                      <div className="summary-tile">
+                        <span className="label">Renewal</span>
+                        <strong>{formatDate(signal.renewalDate)}</strong>
+                      </div>
+                      <div className="summary-tile">
+                        <span className="label">Open risks</span>
+                        <strong>{signal.openRisks.length}</strong>
+                        <span className="helper">{signal.highRisks.length} high severity</span>
+                      </div>
+                      <div className="summary-tile">
+                        <span className="label">Renewal forecast</span>
+                        <strong>{signal.renewalForecastScore}</strong>
+                        <span className="helper">Composite score</span>
+                      </div>
+                      <div className="summary-tile">
+                        <span className="label">Scope creep</span>
+                        <strong>{signal.activeScopeChanges.length ? "Active" : "Clear"}</strong>
+                        <span className="helper">
+                          {signal.activeScopeChanges.length
+                            ? `${signal.activeScopeChanges.length} change request${signal.activeScopeChanges.length > 1 ? "s" : ""}`
+                            : "No open changes"}
+                        </span>
+                      </div>
+                    </div>
+                    {signal.healthStatus.label === "Low" && actionMap.launch_recovery_playbook ? (
+                      <Button
+                        onClick={() =>
+                          setActionSheet({
+                            action: actionMap.launch_recovery_playbook,
+                            context: { engagement_id: signal.id },
+                          })
+                        }
+                      >
+                        Launch recovery playbook
+                      </Button>
+                    ) : null}
+                  </Card>
+                ))}
+              </div>
               <div className="visual-grid">
-                <ChartCard title="Health Composition" description="Milestones + confidence + risks + sentiment + invoices." />
-                <ChartCard title="Engagement Health Trend" />
+                <ChartCard
+                  title="Health Composition (Donut)"
+                  description="Milestones, sentiment, risks, and scope signals."
+                />
+                <ChartCard title="Engagement Health Trend" description="Weekly score trend line over the last 90 days." />
               </div>
               <div className="module-grid">
                 <div className="module-main">
                   <Card className="panel">
-                    <h3>Engagements</h3>
+                    <h3>Engagement health drivers</h3>
                     <DataTable
-                      columns={["Engagement", "Status", "Renewal", "Health", "Completion"]}
-                      rows={engagements.map((engagement) => ({
-                        key: engagement.engagement_id,
-                        Engagement: engagement.engagement_name,
-                        Status: engagement.status,
-                        Renewal: formatDate(engagement.renewal_date),
-                        Health: engagement.engagement_health_score,
-                        Completion: formatPercent(
-                          getDerived(state, "consulting_engagement", engagement.engagement_id, "completion_rate")?.value || 0
+                      columns={["Engagement", "Milestones", "Sponsor sentiment", "Open risks", "Scope creep"]}
+                      rows={engagementSignals.map((signal) => ({
+                        key: `${signal.id}-drivers`,
+                        Engagement: signal.name,
+                        Milestones: formatPercent(signal.milestoneOnTimeRate),
+                        "Sponsor sentiment": formatPercent(signal.sentimentScore),
+                        "Open risks": `${signal.openRisks.length} (${signal.highRisks.length} high)`,
+                        "Scope creep": signal.activeScopeChanges.length ? (
+                          <Badge className="border border-rose-200 bg-rose-100 text-rose-800">Active</Badge>
+                        ) : (
+                          <Badge variant="secondary">Clear</Badge>
                         ),
                         onClick: () =>
                           handleSelectObject({
                             page: "engagement-health",
                             objectType: "consulting_engagement",
-                            objectId: engagement.engagement_id,
+                            objectId: signal.id,
+                          }),
+                      }))}
+                    />
+                  </Card>
+                  <Card className="panel">
+                    <h3>Engagements</h3>
+                    <DataTable
+                      columns={[
+                        "Engagement",
+                        "Status",
+                        "Renewal",
+                        "Health",
+                        "Health status",
+                        "Renewal forecast",
+                        "Scope creep",
+                        "Completion",
+                        "Action",
+                      ]}
+                      rows={engagementSignals.map((signal) => ({
+                        key: signal.id,
+                        Engagement: signal.name,
+                        Status: signal.engagement.status,
+                        Renewal: formatDate(signal.renewalDate),
+                        Health: signal.healthScore,
+                        "Health status": (
+                          <Badge className={signal.healthStatus.className}>{signal.healthStatus.label}</Badge>
+                        ),
+                        "Renewal forecast": signal.renewalForecastScore,
+                        "Scope creep": signal.activeScopeChanges.length ? (
+                          <Badge className="border border-rose-200 bg-rose-100 text-rose-800">Active</Badge>
+                        ) : (
+                          <Badge variant="secondary">Clear</Badge>
+                        ),
+                        Completion: formatPercent(signal.completionRate),
+                        Action:
+                          signal.healthStatus.label === "Low" && actionMap.launch_recovery_playbook ? (
+                            <Button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setActionSheet({
+                                  action: actionMap.launch_recovery_playbook,
+                                  context: { engagement_id: signal.id },
+                                });
+                              }}
+                            >
+                              Launch recovery playbook
+                            </Button>
+                          ) : (
+                            "—"
+                          ),
+                        onClick: () =>
+                          handleSelectObject({
+                            page: "engagement-health",
+                            objectType: "consulting_engagement",
+                            objectId: signal.id,
                           }),
                       }))}
                     />
@@ -2083,8 +3142,9 @@ const App = () => {
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">
                 <KpiCard label="Total pending actions" value={state.action_log.length} />
-                <KpiCard label="SLA breaches" value={actionQueues[0].rows.length} />
-                <KpiCard label="Critical blockers" value={actionQueues[1].rows.length} />
+                <KpiCard label="SLA breaches" value={slaBreachCount} />
+                <KpiCard label="Critical blockers" value={criticalBlockerCount} />
+                <KpiCard label="Recovery playbooks" value={recoveryQueueCount} />
               </div>
               <div className="module-grid">
                 <div className="module-main">
