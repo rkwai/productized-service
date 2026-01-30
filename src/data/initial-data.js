@@ -471,6 +471,22 @@ export const initialData = {
         ],
       },
       {
+        id: "launch_recovery_playbook",
+        description:
+          "Launches a structured recovery workflow when engagement health dips, aligning delivery, scope, and sponsor actions.",
+        parameters: [
+          "engagement_id",
+          "health_drivers",
+          "target_recovery_date",
+          "owner_team_member_id",
+        ],
+        side_effects: [
+          "create_recovery_plan",
+          "notify_engagement_lead",
+          "route_to_action_center_queue",
+        ],
+      },
+      {
         id: "escalate_risk_issue",
         description:
           "Escalates a high-severity risk/issue to sponsor with mitigation ask and decision request.",

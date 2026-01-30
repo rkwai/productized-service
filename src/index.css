@@ -241,6 +241,10 @@ body {
   margin-bottom: 1.5rem;
 }
 
+.summary-grid.compact {
+  margin-bottom: 0;
+}
+
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
