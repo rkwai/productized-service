@@ -32,6 +32,7 @@ Install dependencies and run the happy-path Playwright checks:
 
 ```bash
 npm install
+npm run test:install
 npm test
 ```
 
