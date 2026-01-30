@@ -97,6 +97,16 @@ export const computeDerived = (state) => {
   const outcomesByEngagement = groupBy(instances.outcome || [], (o) => o.engagement_id);
   const metricsByOutcome = groupBy(instances.kpi_metric || [], (m) => m.outcome_id);
   const snapshotsByMetric = groupBy(instances.kpi_snapshot || [], (s) => s.metric_id);
+  const parseDate = (value) => (value ? new Date(value) : null);
+  const latestDate = (values) =>
+    values.reduce((latest, value) => {
+      const parsed = parseDate(value);
+      if (!parsed) return latest;
+      if (!latest || parsed > latest) return parsed;
+      return latest;
+    }, null);
+  const daysSince = (value) =>
+    value ? Math.max(0, Math.round((Date.now() - value.getTime()) / (1000 * 60 * 60 * 24))) : null;
 
   (instances.outcome || []).forEach((outcome) => {
     const metrics = metricsByOutcome[outcome.outcome_id] || [];
@@ -305,6 +315,102 @@ export const computeDerived = (state) => {
         overdue_invoices: overdueInvoices.length,
         sponsor_sentiment: sponsorSentiment,
         missed_milestones: missedMilestones.length,
+      },
+    });
+
+    const latestEngagementActivity = latestDate(
+      engagements.flatMap((engagement) => [engagement.start_date, engagement.end_date, engagement.renewal_date])
+    );
+    const latestStakeholderTouch = latestDate(
+      stakeholders.map((stakeholder) => stakeholder.last_contacted_at)
+    );
+    const latestMilestoneActivity = latestDate(
+      milestones.flatMap((milestone) => [milestone.completed_date, milestone.planned_date, milestone.due_date])
+    );
+    const lastActivityAt = latestDate([
+      account.created_date,
+      latestEngagementActivity?.toISOString(),
+      latestStakeholderTouch?.toISOString(),
+      latestMilestoneActivity?.toISOString(),
+    ]);
+    const freshnessDays = daysSince(lastActivityAt);
+    const freshnessScore = freshnessDays == null ? 0 : Math.max(0, 100 - freshnessDays * 2);
+
+    setDerived(state, {
+      object_type: "client_account",
+      object_id: account.account_id,
+      field: "data_freshness_days",
+      value: freshnessDays,
+      computed_at: now,
+      explanation_json: {
+        last_activity_at: lastActivityAt?.toISOString() || null,
+        latest_engagement_activity: latestEngagementActivity?.toISOString() || null,
+        latest_stakeholder_touch: latestStakeholderTouch?.toISOString() || null,
+        latest_milestone_activity: latestMilestoneActivity?.toISOString() || null,
+      },
+    });
+
+    setDerived(state, {
+      object_type: "client_account",
+      object_id: account.account_id,
+      field: "data_freshness_score",
+      value: Math.round(freshnessScore),
+      computed_at: now,
+      explanation_json: {
+        freshness_days: freshnessDays,
+      },
+    });
+
+    const requiredFields = [
+      "industry",
+      "region",
+      "account_status",
+      "segment_tag",
+      "estimated_ltv",
+      "total_contract_value_to_date",
+    ];
+    const missingFields = requiredFields.filter((field) => !account[field]);
+
+    setDerived(state, {
+      object_type: "client_account",
+      object_id: account.account_id,
+      field: "missing_data_fields",
+      value: missingFields,
+      computed_at: now,
+      explanation_json: {
+        required_fields: requiredFields,
+        missing_count: missingFields.length,
+      },
+    });
+
+    const churnRiskScore = Math.min(
+      100,
+      Math.round(renewalRisk * 0.6 + (100 - healthScore) * 0.3 + (freshnessDays || 0) * 0.2)
+    );
+    const ltvAtRisk = Math.round((Number(account.estimated_ltv || 0) * churnRiskScore) / 100);
+
+    setDerived(state, {
+      object_type: "client_account",
+      object_id: account.account_id,
+      field: "churn_risk_score",
+      value: churnRiskScore,
+      computed_at: now,
+      explanation_json: {
+        renewal_risk_score: renewalRisk,
+        health_score: healthScore,
+        freshness_days: freshnessDays,
+      },
+    });
+
+    setDerived(state, {
+      object_type: "client_account",
+      object_id: account.account_id,
+      field: "ltv_at_risk",
+      value: ltvAtRisk,
+      computed_at: now,
+      explanation_json: {
+        estimated_ltv: account.estimated_ltv,
+        churn_risk_score: churnRiskScore,
       },
     });
 
