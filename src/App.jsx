@@ -54,6 +54,34 @@ const useHashRoute = () => {
 const formatNumber = (value) =>
   Number.isFinite(value) ? value.toLocaleString() : value ?? "—";
 
+const getDaysBetween = (startDate, endDate) =>
+  Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+
+const getMilestoneSlippageDays = (milestone, referenceDate = new Date()) => {
+  if (!milestone?.due_date) return null;
+  const due = new Date(milestone.due_date);
+  const actual = milestone.completed_date ? new Date(milestone.completed_date) : referenceDate;
+  return getDaysBetween(due, actual);
+};
+
+const getMilestoneRisk = (milestone, atRiskFlag, referenceDate = new Date()) => {
+  const confidenceMap = { High: 0.2, Medium: 0.5, Low: 0.8 };
+  const base = confidenceMap[milestone?.confidence_level] ?? 0.45;
+  const dueInDays = milestone?.due_date ? getDaysBetween(referenceDate, new Date(milestone.due_date)) : 30;
+  const urgency =
+    milestone?.status === "Completed"
+      ? 0
+      : dueInDays <= 7
+        ? 0.25
+        : dueInDays <= 21
+          ? 0.15
+          : 0.05;
+  const blockerPenalty = milestone?.blocker_summary ? 0.15 : 0;
+  const riskScore = Math.min(1, base + urgency + blockerPenalty + (atRiskFlag ? 0.2 : 0));
+  const label = riskScore > 0.66 ? "High" : riskScore > 0.4 ? "Medium" : "Low";
+  return { score: riskScore, label };
+};
+
 const DerivedPanel = ({ derived, label }) => {
   if (!derived) return null;
   return (
@@ -268,7 +296,11 @@ const DataTable = ({ columns, rows, onRowClick }) => (
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr key={row.key} onClick={row.onClick || (() => onRowClick?.(row))}>
+          <tr
+            key={row.key}
+            className={row.className}
+            onClick={row.onClick || (() => onRowClick?.(row))}
+          >
             {columns.map((column) => (
               <td key={`${row.key}-${column}`}>{row[column] ?? "—"}</td>
             ))}
@@ -277,6 +309,196 @@ const DataTable = ({ columns, rows, onRowClick }) => (
       </tbody>
     </table>
   </div>
+);
+
+const StatusChip = ({ status }) => {
+  const statusLabel = status || "Unspecified";
+  return (
+    <Badge className={`status-chip status-${statusLabel.toLowerCase().replace(/\s+/g, "-")}`} variant="secondary">
+      {statusLabel}
+    </Badge>
+  );
+};
+
+const RiskChip = ({ label }) => (
+  <Badge className={`risk-chip risk-${label.toLowerCase()}`} variant="subtle">
+    {label} risk
+  </Badge>
+);
+
+const TrendBars = ({ values }) => (
+  <div className="trend-bars">
+    {values.map((value, index) => (
+      <span
+        key={`${value}-${index}`}
+        className="trend-bar"
+        style={{ height: `${Math.max(12, Math.round(value * 48))}px` }}
+      />
+    ))}
+  </div>
+);
+
+const WorkstreamTimeline = ({ workstreams, milestoneInsights, onSelect }) => {
+  const dates = milestoneInsights
+    .flatMap(({ milestone }) => [milestone.planned_date, milestone.due_date, milestone.completed_date])
+    .filter(Boolean)
+    .map((date) => new Date(date));
+
+  if (!dates.length) {
+    return (
+      <Card className="timeline-card">
+        <CardHeader>
+          <CardTitle>Workstream Timeline</CardTitle>
+          <CardDescription>Planned vs due vs completed.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="muted">No timeline data available.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const start = new Date(Math.min(...dates));
+  const end = new Date(Math.max(...dates));
+  const range = Math.max(1, end - start);
+  const getPosition = (dateValue) =>
+    Math.min(100, Math.max(0, ((new Date(dateValue) - start) / range) * 100));
+
+  const milestonesByWorkstream = workstreams.map((workstream) => ({
+    workstream,
+    milestones: milestoneInsights.filter((item) => item.milestone.workstream_id === workstream.workstream_id),
+  }));
+
+  return (
+    <Card className="timeline-card">
+      <CardHeader>
+        <CardTitle>Workstream Timeline</CardTitle>
+        <CardDescription>Planned vs due vs completed with critical path highlights.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="timeline-scale">
+          <span>{formatDate(start)}</span>
+          <span>{formatDate(end)}</span>
+        </div>
+        <div className="timeline-grid">
+          {milestonesByWorkstream.map(({ workstream, milestones }) => (
+            <div key={workstream.workstream_id} className="timeline-group">
+              <div className="timeline-group-header">
+                <strong>{workstream.name}</strong>
+                <span className="muted">{workstream.status}</span>
+              </div>
+              {milestones.map(({ milestone, isCritical }) => {
+                const plannedStart = milestone.planned_date || milestone.due_date;
+                const plannedEnd = milestone.due_date || milestone.planned_date;
+                if (!plannedStart || !plannedEnd) return null;
+                const plannedLeft = getPosition(plannedStart);
+                const plannedWidth = Math.max(2, getPosition(plannedEnd) - plannedLeft);
+                const completedPosition = milestone.completed_date
+                  ? getPosition(milestone.completed_date)
+                  : null;
+                return (
+                  <div
+                    key={milestone.milestone_id}
+                    className={`timeline-row-item ${isCritical ? "critical" : ""}`}
+                    onClick={() =>
+                      onSelect?.({
+                        page: "delivery-reliability",
+                        objectType: "milestone",
+                        objectId: milestone.milestone_id,
+                      })
+                    }
+                  >
+                    <div className="timeline-label">
+                      <span>{milestone.name}</span>
+                      {isCritical ? <Badge className="critical-chip">Critical path</Badge> : null}
+                    </div>
+                    <div className="timeline-track">
+                      <div
+                        className="timeline-bar planned"
+                        style={{ left: `${plannedLeft}%`, width: `${plannedWidth}%` }}
+                      />
+                      {completedPosition != null ? (
+                        <span className="timeline-marker" style={{ left: `${completedPosition}%` }} />
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const SlippageHistogram = ({ milestoneInsights }) => {
+  const buckets = [
+    { label: "On time / early", min: Number.NEGATIVE_INFINITY, max: 0 },
+    { label: "1-7 days", min: 1, max: 7 },
+    { label: "8-14 days", min: 8, max: 14 },
+    { label: "15+ days", min: 15, max: Number.POSITIVE_INFINITY },
+  ];
+
+  const bucketCounts = buckets.map((bucket) => ({
+    ...bucket,
+    count: milestoneInsights.filter(({ slippageDays }) => {
+      if (slippageDays == null) return false;
+      return slippageDays >= bucket.min && slippageDays <= bucket.max;
+    }).length,
+  }));
+
+  const maxCount = Math.max(1, ...bucketCounts.map((bucket) => bucket.count));
+
+  return (
+    <Card className="histogram-card">
+      <CardHeader>
+        <CardTitle>Slippage Histogram</CardTitle>
+        <CardDescription>Distribution of days late or early.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="histogram">
+          {bucketCounts.map((bucket) => (
+            <div key={bucket.label} className="histogram-row">
+              <span>{bucket.label}</span>
+              <div className="histogram-bar">
+                <div style={{ width: `${(bucket.count / maxCount) * 100}%` }} />
+              </div>
+              <strong>{bucket.count}</strong>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const OwnerReliabilityCard = ({ ownerReliability }) => (
+  <Card className="owner-reliability-card">
+    <CardHeader>
+      <CardTitle>Owner Reliability</CardTitle>
+      <CardDescription>Historical on-time delivery trend by owner.</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div className="owner-reliability-grid">
+        {ownerReliability.map((owner) => (
+          <div key={owner.id} className="owner-reliability-row">
+            <div>
+              <strong>{owner.name}</strong>
+              <span className="muted">{owner.role}</span>
+            </div>
+            <div className="owner-reliability-metrics">
+              <div>
+                <span className="label">On-time rate</span>
+                <strong>{formatPercent(owner.onTimeRate)}</strong>
+              </div>
+              <TrendBars values={owner.trend} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
 );
 
 const ALL_FILTER_VALUE = "__all__";
@@ -706,6 +928,7 @@ const App = () => {
   const engagements = state?.instances.consulting_engagement || [];
   const workstreams = state?.instances.workstream || [];
   const milestones = state?.instances.milestone || [];
+  const teamMembers = state?.instances.team_member || [];
   const outcomes = state?.instances.outcome || [];
   const risks = state?.instances.risk_issue || [];
   const invoices = state?.instances.invoice || [];
@@ -803,6 +1026,36 @@ const App = () => {
       }));
   }, [actionMap, selectedObjectRecord, selectedObjectType, state]);
 
+  const deliveryActionContext =
+    selectedObjectType === "milestone"
+      ? selectedObjectRecord || {}
+      : {
+          engagement_id: engagements[0]?.engagement_id,
+        };
+
+  const deliveryActions = [
+    {
+      id: "request_signoff",
+      description: "Request client sign-off for a milestone deliverable with explicit due date.",
+      parameters: ["milestone_id", "requested_by", "due_date", "notes"],
+    },
+    {
+      id: "escalate_blocker",
+      description: "Escalate an active blocker with a clear decision request and mitigation ask.",
+      parameters: ["milestone_id", "blocker_summary", "requested_decision_by_date"],
+    },
+    {
+      id: "export_calendar",
+      description: "Export milestones to an .ics calendar for stakeholders.",
+      parameters: ["engagement_id", "date_range_start", "date_range_end", "distribution_list"],
+    },
+    {
+      id: "schedule_reminder",
+      description: "Schedule reminders for upcoming milestones and sign-offs.",
+      parameters: ["milestone_id", "reminder_date", "reminder_message"],
+    },
+  ];
+
   if (!state) {
     return <div className="loading">Loading workspace…</div>;
   }
@@ -851,6 +1104,77 @@ const App = () => {
 
   const overdueInvoices = invoices.filter((invoice) => invoice.status === "Overdue").length;
 
+  const teamMemberMap = new Map(teamMembers.map((member) => [member.team_member_id, member]));
+  const workstreamMap = new Map(workstreams.map((workstream) => [workstream.workstream_id, workstream]));
+  const today = new Date();
+
+  const milestoneInsights = milestones.map((milestone) => {
+    const atRiskFlag = Boolean(
+      getDerived(state, "milestone", milestone.milestone_id, "at_risk_flag")?.value
+    );
+    const risk = getMilestoneRisk(milestone, atRiskFlag, today);
+    const slippageDays = getMilestoneSlippageDays(milestone, today);
+    const workstream = workstreamMap.get(milestone.workstream_id);
+    const dependencies = [];
+    if (milestone.blocker_summary) {
+      dependencies.push({ label: "Blocker", tone: "high" });
+    }
+    if (milestone.client_signoff_required_flag && !milestone.client_signoff_date) {
+      dependencies.push({ label: "Client sign-off", tone: "medium" });
+    }
+    if (workstream?.status === "At Risk") {
+      dependencies.push({ label: "Workstream risk", tone: "medium" });
+    }
+    if (milestone.due_date && new Date(milestone.due_date) < today && milestone.status !== "Completed") {
+      dependencies.push({ label: "Overdue", tone: "high" });
+    }
+    const dueInDays = milestone.due_date ? getDaysBetween(today, new Date(milestone.due_date)) : 999;
+    const isCritical =
+      risk.label === "High" ||
+      (milestone.status !== "Completed" && slippageDays > 0) ||
+      (milestone.status !== "Completed" && dueInDays <= 14);
+    return {
+      milestone,
+      workstream,
+      atRiskFlag,
+      risk,
+      slippageDays,
+      dependencies,
+      isCritical,
+    };
+  });
+
+  const ownerReliability = teamMembers.map((member) => {
+    const ownerMilestones = milestoneInsights.filter(
+      ({ milestone }) => milestone.owner_team_member_id === member.team_member_id
+    );
+    const completed = ownerMilestones.filter(({ milestone }) => milestone.completed_date);
+    const onTimeCompleted = completed.filter(
+      ({ milestone }) => milestone.due_date && new Date(milestone.completed_date) <= new Date(milestone.due_date)
+    ).length;
+    const onTimeRate = completed.length ? onTimeCompleted / completed.length : 0;
+    const trend = ownerMilestones
+      .slice()
+      .sort((a, b) => new Date(a.milestone.due_date || 0) - new Date(b.milestone.due_date || 0))
+      .slice(-4)
+      .map(({ milestone }) => {
+        if (milestone.completed_date && milestone.due_date) {
+          return new Date(milestone.completed_date) <= new Date(milestone.due_date) ? 0.9 : 0.4;
+        }
+        if (milestone.due_date && new Date(milestone.due_date) >= today) {
+          return 0.7;
+        }
+        return 0.3;
+      });
+    return {
+      id: member.team_member_id,
+      name: member.name,
+      role: member.role,
+      onTimeRate,
+      trend: trend.length ? trend : [0.5, 0.6, 0.4, 0.7],
+    };
+  });
+
   const filterOptions = {
     regions: Array.from(new Set(accounts.map((account) => account.region))).filter(Boolean),
     segments: Array.from(
@@ -870,6 +1194,29 @@ const App = () => {
     fde_lead: state.config.client_metadata.fde_lead,
     deployment_timeline: state.config.client_metadata.deployment_timeline,
   };
+
+  const unassignedMilestones = milestoneInsights.filter((item) => !item.workstream);
+  const deliveryWorkstreams = [
+    ...workstreams.map((workstream) => ({
+      workstream,
+      milestones: milestoneInsights.filter(
+        (item) => item.milestone.workstream_id === workstream.workstream_id
+      ),
+    })),
+    ...(unassignedMilestones.length
+      ? [
+          {
+            workstream: {
+              workstream_id: "unassigned",
+              name: "Unassigned",
+              status: "Needs assignment",
+              owner_team_member_id: "",
+            },
+            milestones: unassignedMilestones,
+          },
+        ]
+      : []),
+  ].filter((group) => group.milestones.length);
 
   const selectedInstanceType =
     instanceType || state.config.semantic_layer.object_types[0]?.id || "";
@@ -1260,6 +1607,19 @@ const App = () => {
               <PageHeader
                 title="Delivery Reliability"
                 description="Workstreams and milestones with delivery reliability signals."
+                action={
+                  <div className="action-row">
+                    {deliveryActions.map((action) => (
+                      <Button
+                        key={action.id}
+                        variant="secondary"
+                        onClick={() => setActionSheet({ action, context: deliveryActionContext })}
+                      >
+                        {toTitle(action.id)}
+                      </Button>
+                    ))}
+                  </div>
+                }
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">
@@ -1300,31 +1660,72 @@ const App = () => {
                 />
               </div>
               <div className="visual-grid">
-                <ChartCard title="Workstream Timeline" description="Planned vs due vs completed." />
-                <ChartCard title="Slippage Histogram" />
+                <WorkstreamTimeline
+                  workstreams={workstreams}
+                  milestoneInsights={milestoneInsights}
+                  onSelect={handleSelectObject}
+                />
+                <SlippageHistogram milestoneInsights={milestoneInsights} />
+              </div>
+              <div className="insight-grid">
+                <OwnerReliabilityCard ownerReliability={ownerReliability} />
               </div>
               <div className="module-grid">
                 <div className="module-main">
                   <Card className="panel">
                     <h3>Milestones</h3>
-                    <DataTable
-                      columns={["Milestone", "Due date", "Confidence", "Blocker", "Owner", "Signoff"]}
-                      rows={milestones.map((milestone) => ({
-                        key: milestone.milestone_id,
-                        Milestone: milestone.name,
-                        "Due date": formatDate(milestone.due_date),
-                        Confidence: milestone.confidence_level,
-                        Blocker: milestone.blocker_summary || "—",
-                        Owner: milestone.owner_team_member_id,
-                        Signoff: milestone.client_signoff_date ? "Signed" : "Pending",
-                        onClick: () =>
-                          handleSelectObject({
-                            page: "delivery-reliability",
-                            objectType: "milestone",
-                            objectId: milestone.milestone_id,
-                          }),
-                      }))}
-                    />
+                    <div className="workstream-sections">
+                      {deliveryWorkstreams.map(({ workstream, milestones: groupedMilestones }) => (
+                        <div key={workstream.workstream_id} className="workstream-section">
+                          <div className="workstream-header">
+                            <div>
+                              <h4>{workstream.name}</h4>
+                              <span className="muted">Owner: {teamMemberMap.get(workstream.owner_team_member_id)?.name || "—"}</span>
+                            </div>
+                            <StatusChip status={workstream.status} />
+                          </div>
+                          <DataTable
+                            columns={["Milestone", "Status", "Due date", "Risk", "Dependencies", "Owner", "Signoff"]}
+                            rows={groupedMilestones.map(({ milestone, risk, dependencies, isCritical }) => ({
+                              key: milestone.milestone_id,
+                              className: isCritical ? "critical-row" : "",
+                              Milestone: (
+                                <div className="milestone-cell">
+                                  <strong>{milestone.name}</strong>
+                                  {isCritical ? <Badge className="critical-chip">Critical path</Badge> : null}
+                                </div>
+                              ),
+                              Status: <StatusChip status={milestone.status} />,
+                              "Due date": formatDate(milestone.due_date),
+                              Risk: <RiskChip label={risk.label} />,
+                              Dependencies: dependencies.length ? (
+                                <div className="dependency-list">
+                                  {dependencies.map((dependency) => (
+                                    <Badge
+                                      key={`${milestone.milestone_id}-${dependency.label}`}
+                                      className={`dependency-chip dependency-${dependency.tone}`}
+                                      variant="outline"
+                                    >
+                                      {dependency.label}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                "—"
+                              ),
+                              Owner: teamMemberMap.get(milestone.owner_team_member_id)?.name || milestone.owner_team_member_id,
+                              Signoff: milestone.client_signoff_date ? "Signed" : "Pending",
+                              onClick: () =>
+                                handleSelectObject({
+                                  page: "delivery-reliability",
+                                  objectType: "milestone",
+                                  objectId: milestone.milestone_id,
+                                }),
+                            }))}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </Card>
                 </div>
                 <ObjectViewPanel
