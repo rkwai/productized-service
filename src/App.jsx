@@ -130,6 +130,8 @@ const getHealthStatus = (score) => {
 
 const clampScore = (value) => Math.max(0, Math.min(100, Math.round(value)));
 
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
 const DerivedPanel = ({ derived, label }) => {
   if (!derived) return null;
   return (
@@ -357,10 +359,144 @@ const ChartCard = ({ title, description, children }) => (
       {description ? <CardDescription>{description}</CardDescription> : null}
     </CardHeader>
     <CardContent>
-      {children ? children : <div className="chart-placeholder">Chart placeholder</div>}
+      {children ?? <div className="chart-placeholder">Chart placeholder</div>}
     </CardContent>
   </Card>
 );
+
+const TrendIndicator = ({ value }) => {
+  const direction = value > 0 ? "up" : value < 0 ? "down" : "flat";
+  const label = `${value > 0 ? "+" : ""}${value} pts vs last period`;
+  return <span className={`trend-indicator ${direction}`}>{label}</span>;
+};
+
+const RiskValueScatter = ({ data }) => {
+  const width = 360;
+  const height = 200;
+  const padding = 30;
+  const maxValue = Math.max(...data.map((point) => point.value), 1);
+  const segments = Array.from(new Set(data.map((point) => point.segment))).filter(Boolean);
+  const palette = ["#2563eb", "#16a34a", "#f97316", "#7c3aed"];
+  const colorFor = (segment) => {
+    const index = Math.max(segments.indexOf(segment), 0);
+    return palette[index % palette.length];
+  };
+
+  return (
+    <div className="chart-body">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Risk vs value scatter plot">
+        <rect x="0" y="0" width={width} height={height} rx="12" fill="var(--secondary)" />
+        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="var(--border-color)" />
+        <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="var(--border-color)" />
+        {[25, 50, 75].map((tick) => (
+          <line
+            key={`x-${tick}`}
+            x1={padding + ((width - padding * 2) * tick) / 100}
+            y1={height - padding}
+            x2={padding + ((width - padding * 2) * tick) / 100}
+            y2={padding}
+            stroke="var(--border-color)"
+            strokeDasharray="4 4"
+          />
+        ))}
+        {data.map((point) => {
+          const x = padding + ((width - padding * 2) * point.risk) / 100;
+          const y =
+            height -
+            padding -
+            ((height - padding * 2) * point.value) / maxValue;
+          return (
+            <circle
+              key={point.id}
+              cx={x}
+              cy={y}
+              r={6}
+              fill={colorFor(point.segment)}
+              stroke="white"
+              strokeWidth="2"
+            />
+          );
+        })}
+        <text x={padding} y={height - 8} fontSize="10" fill="var(--muted-text)">
+          Lower risk
+        </text>
+        <text x={width - padding - 40} y={height - 8} fontSize="10" fill="var(--muted-text)">
+          Higher risk
+        </text>
+        <text x={8} y={padding - 8} fontSize="10" fill="var(--muted-text)">
+          Contract value
+        </text>
+      </svg>
+      <div className="chart-legend">
+        {segments.map((segment) => (
+          <div key={segment} className="legend-item">
+            <span className="legend-dot" style={{ background: colorFor(segment) }} />
+            {segment}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const HealthTrendChart = ({ data }) => {
+  const width = 360;
+  const height = 200;
+  const padding = 30;
+  const minValue = Math.min(...data.map((point) => point.value), 0);
+  const maxValue = Math.max(...data.map((point) => point.value), 100);
+  const range = maxValue - minValue || 1;
+  const step = (width - padding * 2) / (data.length - 1);
+  const points = data.map((point, index) => {
+    const x = padding + index * step;
+    const y = height - padding - ((point.value - minValue) / range) * (height - padding * 2);
+    return { ...point, x, y };
+  });
+  const path = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .join(" ");
+
+  return (
+    <div className="chart-body">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Portfolio health trend line">
+        <rect x="0" y="0" width={width} height={height} rx="12" fill="var(--secondary)" />
+        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="var(--border-color)" />
+        <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="var(--border-color)" />
+        {[25, 50, 75].map((tick) => (
+          <line
+            key={`y-${tick}`}
+            x1={padding}
+            y1={height - padding - ((height - padding * 2) * tick) / 100}
+            x2={width - padding}
+            y2={height - padding - ((height - padding * 2) * tick) / 100}
+            stroke="var(--border-color)"
+            strokeDasharray="4 4"
+          />
+        ))}
+        <path d={path} fill="none" stroke="#2563eb" strokeWidth="3" />
+        {points.map((point) => (
+          <circle key={point.label} cx={point.x} cy={point.y} r={5} fill="#2563eb" stroke="white" strokeWidth="2" />
+        ))}
+        {points.map((point) => (
+          <text
+            key={`${point.label}-label`}
+            x={point.x}
+            y={height - 8}
+            fontSize="10"
+            textAnchor="middle"
+            fill="var(--muted-text)"
+          >
+            {point.label}
+          </text>
+        ))}
+      </svg>
+      <div className="trend-summary">
+        <span className="trend-current">{data[data.length - 1]?.value ?? 0}%</span>
+        <span className="trend-note">Current portfolio health score</span>
+      </div>
+    </div>
+  );
+};
 
 const DataTable = ({ columns, rows, onRowClick }) => (
   <div className="table-wrapper">
@@ -614,6 +750,7 @@ const App = () => {
     engagement: "",
     dateRange: "",
   });
+  const [homeTopRiskOnly, setHomeTopRiskOnly] = useState(false);
   const [actionSheet, setActionSheet] = useState(null);
   const [portfolioSavedViews, setPortfolioSavedViews] = useState(PORTFOLIO_VIEW_PRESETS);
   const [portfolioView, setPortfolioView] = useState(PORTFOLIO_VIEW_PRESETS[0].name);
@@ -1063,56 +1200,101 @@ const App = () => {
 
   const isViewer = state.role === "Viewer";
 
-  const accountSignals = useMemo(
-    () =>
-      accounts.map((account) => {
-        const health = getDerived(state, "client_account", account.account_id, "health_score");
-        const risk = getDerived(state, "client_account", account.account_id, "renewal_risk_score");
-        const churn = getDerived(state, "client_account", account.account_id, "churn_risk_score");
-        const freshness = getDerived(state, "client_account", account.account_id, "data_freshness_days");
-        const missing = getDerived(state, "client_account", account.account_id, "missing_data_fields");
-        const ltvAtRisk = getDerived(state, "client_account", account.account_id, "ltv_at_risk");
-        const segment = getDerived(state, "client_account", account.account_id, "segment_tag");
-        return {
-          account,
-          healthValue: health?.value ?? account.health_score,
-          riskValue: risk?.value ?? account.renewal_risk_score,
-          churnValue: churn?.value ?? 0,
-          freshnessDays: freshness?.value ?? null,
-          missingFields: missing?.value ?? [],
-          ltvAtRisk: ltvAtRisk?.value ?? 0,
-          segmentValue: segment?.value ?? account.segment_tag,
-        };
-      }),
-    [accounts, state]
-  );
+  const RENEWAL_RISK_THRESHOLD = 70;
+  const MILESTONE_AT_RISK_WINDOW_DAYS = 14;
+  const now = new Date();
 
-  const attentionAccounts = accountSignals
-    .sort((a, b) => (b.riskValue || 0) - (a.riskValue || 0))
-    .slice(0, 4);
+  const isMilestoneAtRisk = (milestone) => {
+    if (!milestone?.due_date || milestone.status === "Completed") return false;
+    const dueDate = new Date(milestone.due_date);
+    const daysToDue = (dueDate - now) / (1000 * 60 * 60 * 24);
+    return (
+      daysToDue <= MILESTONE_AT_RISK_WINDOW_DAYS ||
+      getDerived(state, "milestone", milestone.milestone_id, "at_risk_flag")?.value
+    );
+  };
 
-  const avgHealth = accountSignals.length
-    ? Math.round(accountSignals.reduce((sum, item) => sum + (item.healthValue || 0), 0) / accountSignals.length)
-    : 0;
+  const workstreamById = new Map(workstreams.map((workstream) => [workstream.workstream_id, workstream]));
+  const engagementById = new Map(engagements.map((engagement) => [engagement.engagement_id, engagement]));
+  const milestonesByAccountId = new Map();
+  milestones.forEach((milestone) => {
+    const workstream = workstreamById.get(milestone.workstream_id);
+    const engagement = workstream ? engagementById.get(workstream.engagement_id) : null;
+    if (!engagement) return;
+    const list = milestonesByAccountId.get(engagement.account_id) ?? [];
+    list.push(milestone);
+    milestonesByAccountId.set(engagement.account_id, list);
+  });
+  const highRisksByAccountId = new Map();
+  risks.forEach((risk) => {
+    if (risk.severity !== "High" || risk.status === "Resolved") return;
+    const engagement = engagementById.get(risk.engagement_id);
+    if (!engagement) return;
+    const list = highRisksByAccountId.get(engagement.account_id) ?? [];
+    list.push(risk);
+    highRisksByAccountId.set(engagement.account_id, list);
+  });
 
-  const avgRisk = accountSignals.length
-    ? Math.round(accountSignals.reduce((sum, item) => sum + (item.riskValue || 0), 0) / accountSignals.length)
-    : 0;
+  const filteredAccounts = accounts.filter((account) => {
+    const segmentValue =
+      getDerived(state, "client_account", account.account_id, "segment_tag")?.value || account.segment_tag;
+    const regionMatches = !filters.region || account.region === filters.region;
+    const segmentMatches = !filters.segment || segmentValue === filters.segment;
+    const accountMatches = !filters.account || account.account_name === filters.account;
+    return regionMatches && segmentMatches && accountMatches;
+  });
 
-  const avgChurnRisk = accountSignals.length
-    ? Math.round(accountSignals.reduce((sum, item) => sum + (item.churnValue || 0), 0) / accountSignals.length)
-    : 0;
+  const accountInsights = filteredAccounts.map((account) => {
+    const health = getDerived(state, "client_account", account.account_id, "health_score");
+    const risk = getDerived(state, "client_account", account.account_id, "renewal_risk_score");
+    const segment = getDerived(state, "client_account", account.account_id, "segment_tag");
+    const accountMilestones = milestonesByAccountId.get(account.account_id) ?? [];
+    const atRiskMilestoneCount = accountMilestones.filter(isMilestoneAtRisk).length;
+    const highRiskCount = highRisksByAccountId.get(account.account_id)?.length ?? 0;
+    return {
+      account,
+      health,
+      risk,
+      segment,
+      atRiskMilestoneCount,
+      highRiskCount,
+    };
+  });
 
-  const totalLtvAtRisk = accountSignals.reduce((sum, item) => sum + Number(item.ltvAtRisk || 0), 0);
-  const totalContractValue = accountSignals.reduce(
-    (sum, item) => sum + Number(item.account.total_contract_value_to_date || 0),
-    0
-  );
+  const attentionCandidates = accountInsights
+    .filter(
+      ({ risk, atRiskMilestoneCount, highRiskCount }) =>
+        (risk?.value || 0) >= RENEWAL_RISK_THRESHOLD ||
+        atRiskMilestoneCount > 0 ||
+        highRiskCount > 0
+    )
+    .sort((a, b) => (b.risk?.value || 0) - (a.risk?.value || 0));
 
-  const avgFreshnessDays = accountSignals.length
+  const accountsAboveRiskThreshold = accountInsights.filter(
+    ({ risk }) => (risk?.value || 0) >= RENEWAL_RISK_THRESHOLD
+  ).length;
+
+  const attentionAccounts = homeTopRiskOnly
+    ? [...accountInsights].sort((a, b) => (b.risk?.value || 0) - (a.risk?.value || 0)).slice(0, 10)
+    : attentionCandidates.slice(0, 6);
+
+  const avgHealth = filteredAccounts.length
     ? Math.round(
-        accountSignals.reduce((sum, item) => sum + (Number.isFinite(item.freshnessDays) ? item.freshnessDays : 0), 0) /
-          accountSignals.length
+        filteredAccounts.reduce(
+          (sum, account) =>
+            sum + (getDerived(state, "client_account", account.account_id, "health_score")?.value || 0),
+          0
+        ) / filteredAccounts.length
+      )
+    : 0;
+
+  const avgRisk = filteredAccounts.length
+    ? Math.round(
+        filteredAccounts.reduce(
+          (sum, account) =>
+            sum + (getDerived(state, "client_account", account.account_id, "renewal_risk_score")?.value || 0),
+          0
+        ) / filteredAccounts.length
       )
     : 0;
 
@@ -1191,15 +1373,34 @@ const App = () => {
     (outcome) => (getDerived(state, "outcome", outcome.outcome_id, "progress_pct")?.value || 0) >= 0.6
   ).length;
 
-  const atRiskMilestones = milestones.filter(
-    (milestone) => getDerived(state, "milestone", milestone.milestone_id, "at_risk_flag")?.value
-  ).length;
+  const atRiskMilestones = milestones.filter(isMilestoneAtRisk).length;
 
   const openHighRisks = risks.filter((risk) => risk.severity === "High" && risk.status !== "Resolved").length;
 
   const overdueInvoices = invoices.filter((invoice) => invoice.status === "Overdue").length;
 
-  const lowHealthEngagements = engagementSignals.filter((signal) => signal.healthScore < 65);
+  const milestoneReliability = milestones.length
+    ? Math.round(100 - (atRiskMilestones / milestones.length) * 100)
+    : 100;
+  const outcomeConfidence = state.instances.outcome?.length
+    ? Math.round((onTrackOutcomes / state.instances.outcome.length) * 100)
+    : 100;
+  const portfolioHealthScore = clamp(
+    Math.round(avgHealth * 0.4 + (100 - avgRisk) * 0.25 + milestoneReliability * 0.2 + outcomeConfidence * 0.15),
+    0,
+    100
+  );
+  const portfolioHealthPrevious = clamp(
+    portfolioHealthScore - Math.round(openHighRisks * 1.5 + overdueInvoices * 0.75),
+    0,
+    100
+  );
+  const portfolioHealthTrend = portfolioHealthScore - portfolioHealthPrevious;
+
+  const pipelineRiskExposure = attentionCandidates
+    .filter(({ risk }) => (risk?.value || 0) >= RENEWAL_RISK_THRESHOLD)
+    .slice(0, 5)
+    .reduce((sum, { account }) => sum + Number(account.total_contract_value_to_date || 0), 0);
 
   const filterOptions = {
     regions: Array.from(new Set(accounts.map((account) => account.region))).filter(Boolean),
@@ -1555,54 +1756,207 @@ const App = () => {
               <PageHeader
                 title="Home / Executive Summary"
                 description="Portfolio-level signals for renewal readiness, delivery reliability, and value realization."
-                action={<div className="pill">Executive Summary</div>}
+                action={
+                  <div className="page-actions">
+                    <div className="pill">Executive Summary</div>
+                    <button
+                      type="button"
+                      className={`filter-chip ${homeTopRiskOnly ? "active" : ""}`}
+                      onClick={() => setHomeTopRiskOnly((prev) => !prev)}
+                    >
+                      Top 10 at-risk
+                    </button>
+                  </div>
+                }
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
-              <div className="kpi-row">
-                <KpiCard label="# Active Accounts" value={accounts.length} />
-                <KpiCard label="Avg Account Health" value={avgHealth} />
-                <KpiCard label="Avg Renewal Risk" value={avgRisk} />
-                <KpiCard label="# At-Risk Milestones" value={atRiskMilestones} />
-                <KpiCard label="# Open High Severity Risks" value={openHighRisks} />
-                <KpiCard label="# Overdue Invoices" value={overdueInvoices} />
-                <KpiCard label="Outcomes On Track" value={onTrackOutcomes} />
+              <div className="kpi-groups">
+                <div className="kpi-group">
+                  <div className="kpi-group-header">
+                    <h3>Portfolio health</h3>
+                    <p>Weighted score across health, risk, milestones, and outcomes.</p>
+                  </div>
+                  <div className="kpi-row">
+                    <KpiCard
+                      label="Portfolio Health Score"
+                      value={`${portfolioHealthScore}%`}
+                      helper={<TrendIndicator value={portfolioHealthTrend} />}
+                    />
+                    <KpiCard label="# Active Accounts" value={filteredAccounts.length} />
+                    <KpiCard label="Avg Account Health" value={avgHealth} />
+                    <KpiCard label="Outcomes On Track" value={onTrackOutcomes} />
+                  </div>
+                </div>
+                <div className="kpi-group">
+                  <div className="kpi-group-header">
+                    <h3>Renewal risk</h3>
+                    <p>Exposure to renewal slippage across top accounts.</p>
+                  </div>
+                  <div className="kpi-row">
+                    <KpiCard label="Avg Renewal Risk" value={avgRisk} />
+                    <KpiCard
+                      label="Pipeline Risk Exposure"
+                      value={`$${formatNumber(pipelineRiskExposure)}`}
+                      helper="Top 5 accounts above risk threshold."
+                    />
+                    <KpiCard label="# Accounts Above Risk Threshold" value={accountsAboveRiskThreshold} />
+                  </div>
+                </div>
+                <div className="kpi-group">
+                  <div className="kpi-group-header">
+                    <h3>Delivery & finance</h3>
+                    <p>Commitments and collections requiring escalation.</p>
+                  </div>
+                  <div className="kpi-row">
+                    <KpiCard label="# At-Risk Milestones" value={atRiskMilestones} />
+                    <KpiCard label="# Open High Severity Risks" value={openHighRisks} />
+                    <KpiCard label="# Overdue Invoices" value={overdueInvoices} />
+                  </div>
+                </div>
               </div>
+              <Card className="panel formula-card">
+                <h3>Portfolio health definition</h3>
+                <p>
+                  Weighted score = 40% average health + 25% inverse renewal risk + 20% milestone reliability + 15%
+                  outcome confidence. Reliability = 100 - (% milestones at risk).
+                </p>
+                <div className="formula-meta">
+                  <div>
+                    <strong>At-risk milestone threshold</strong>
+                    <span>Due in ≤ {MILESTONE_AT_RISK_WINDOW_DAYS} days or flagged at risk.</span>
+                  </div>
+                  <div>
+                    <strong>Renewal risk threshold</strong>
+                    <span>Score ≥ {RENEWAL_RISK_THRESHOLD} triggers renewal risk alerts.</span>
+                  </div>
+                </div>
+              </Card>
               <div className="visual-grid">
                 <ChartCard
-                  title="LTV vs Renewal Risk"
-                  description="Size = total contract value; color = segment."
-                />
+                  title="Risk vs Value scatter"
+                  description="Renewal risk plotted against total contract value, colored by segment."
+                >
+                  <RiskValueScatter
+                    data={accountInsights.map(({ account, risk, segment }) => ({
+                      id: account.account_id,
+                      risk: risk?.value ?? 0,
+                      value: Number(account.total_contract_value_to_date || 0),
+                      segment: segment?.value ?? account.segment_tag ?? "Core",
+                    }))}
+                  />
+                </ChartCard>
                 <ChartCard
-                  title="Engagement Health Trend"
-                  description="Historical engagement health snapshots."
-                />
+                  title="Portfolio health trend"
+                  description="Trailing six checkpoints (simulated from current health drivers)."
+                >
+                  <HealthTrendChart
+                    data={[
+                      { label: "Apr", value: clamp(portfolioHealthScore - 12, 0, 100) },
+                      { label: "May", value: clamp(portfolioHealthScore - 8, 0, 100) },
+                      { label: "Jun", value: clamp(portfolioHealthScore - 5, 0, 100) },
+                      { label: "Jul", value: clamp(portfolioHealthScore - 3, 0, 100) },
+                      { label: "Aug", value: clamp(portfolioHealthScore - 1, 0, 100) },
+                      { label: "Sep", value: portfolioHealthScore },
+                    ]}
+                  />
+                </ChartCard>
               </div>
               <div className="module-grid">
                 <div className="module-main">
                   <Card className="panel">
-                    <h3>Accounts needing attention</h3>
+                    <div className="panel-header">
+                      <div>
+                        <h3>Accounts needing attention</h3>
+                        <p>
+                          {homeTopRiskOnly
+                            ? "Top 10 accounts by renewal risk score."
+                            : "Accounts above renewal or delivery risk thresholds."}
+                        </p>
+                      </div>
+                      <Badge variant="secondary">{attentionAccounts.length} accounts</Badge>
+                    </div>
                     <DataTable
                       columns={[
                         "Account",
                         "Health",
                         "Renewal risk",
+                        "Alerts",
                         "Segment",
                         "Value",
+                        "Quick actions",
                       ]}
-                      rows={attentionAccounts.map(({ account, healthValue, riskValue, segmentValue }) => ({
-                        key: account.account_id,
-                        Account: account.account_name,
-                        Health: healthValue ?? account.health_score,
-                        "Renewal risk": riskValue ?? account.renewal_risk_score,
-                        Segment: segmentValue ?? account.segment_tag,
-                        Value: formatNumber(account.total_contract_value_to_date),
-                        onClick: () =>
-                          handleSelectObject({
-                            page: "home",
-                            objectType: "client_account",
-                            objectId: account.account_id,
-                          }),
-                      }))}
+                      rows={attentionAccounts.map(
+                        ({ account, health, risk, segment, atRiskMilestoneCount, highRiskCount }) => {
+                          const renewalRiskValue = risk?.value ?? account.renewal_risk_score;
+                          const alertBadges = [];
+                          if (renewalRiskValue >= RENEWAL_RISK_THRESHOLD) {
+                            alertBadges.push(
+                              <Badge key="renewal" className="alert-badge" variant="secondary">
+                                Renewal risk
+                              </Badge>
+                            );
+                          }
+                          if (atRiskMilestoneCount > 0) {
+                            alertBadges.push(
+                              <Badge key="milestone" className="alert-badge" variant="outline">
+                                {atRiskMilestoneCount} milestone{atRiskMilestoneCount > 1 ? "s" : ""} due
+                              </Badge>
+                            );
+                          }
+                          if (highRiskCount > 0) {
+                            alertBadges.push(
+                              <Badge key="risk" className="alert-badge danger" variant="outline">
+                                High severity risk
+                              </Badge>
+                            );
+                          }
+                          return {
+                            key: account.account_id,
+                            Account: account.account_name,
+                            Health: health?.value ?? account.health_score,
+                            "Renewal risk": renewalRiskValue,
+                            Alerts: <div className="alert-badges">{alertBadges}</div>,
+                            Segment: segment?.value ?? account.segment_tag,
+                            Value: formatNumber(account.total_contract_value_to_date),
+                            "Quick actions": (
+                              <div className="table-actions">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    const action = actionMap.publish_exec_readout;
+                                    if (action) {
+                                      setActionSheet({ action, context: account });
+                                    }
+                                  }}
+                                >
+                                  Open exec brief
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    const action = actionMap.escalate_risk_issue;
+                                    if (action) {
+                                      setActionSheet({ action, context: account });
+                                    }
+                                  }}
+                                >
+                                  Start escalation
+                                </Button>
+                              </div>
+                            ),
+                            onClick: () =>
+                              handleSelectObject({
+                                page: "home",
+                                objectType: "client_account",
+                                objectId: account.account_id,
+                              }),
+                          };
+                        }
+                      )}
                     />
                   </Card>
                 </div>
