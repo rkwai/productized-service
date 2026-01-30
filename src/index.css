@@ -225,6 +225,12 @@ body {
   gap: 1rem;
 }
 
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .page-header .pill {
   padding: 0.35rem 0.75rem;
   background: hsl(var(--secondary));
@@ -366,6 +372,12 @@ body {
   gap: 1rem;
 }
 
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
 .chart-card .chart-placeholder {
   border-radius: var(--radius-md);
   border: 1px dashed var(--border-color);
@@ -443,6 +455,240 @@ body {
 .module-main {
   display: grid;
   gap: 1.5rem;
+}
+
+.workstream-sections {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.workstream-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.workstream-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.workstream-header h4 {
+  margin: 0;
+}
+
+.milestone-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dependency-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.status-chip {
+  text-transform: capitalize;
+}
+
+.status-chip.status-at-risk {
+  background: rgba(248, 113, 113, 0.18);
+  color: #991b1b;
+}
+
+.status-chip.status-in-progress {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+}
+
+.status-chip.status-completed {
+  background: rgba(34, 197, 94, 0.18);
+  color: #15803d;
+}
+
+.risk-chip {
+  text-transform: capitalize;
+}
+
+.risk-chip.risk-high {
+  color: #991b1b;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.risk-chip.risk-medium {
+  color: #92400e;
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.risk-chip.risk-low {
+  color: #047857;
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.dependency-chip {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dependency-chip.dependency-high {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #991b1b;
+}
+
+.dependency-chip.dependency-medium {
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #92400e;
+}
+
+.critical-chip {
+  background: rgba(15, 118, 110, 0.15);
+  color: #0f766e;
+  font-size: 0.7rem;
+}
+
+.critical-row {
+  background: rgba(15, 118, 110, 0.06);
+}
+
+.timeline-card,
+.histogram-card,
+.owner-reliability-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.timeline-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--muted-text);
+  margin-bottom: 0.75rem;
+}
+
+.timeline-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.timeline-group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.timeline-group-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--muted-text);
+}
+
+.timeline-row-item {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.timeline-row-item.critical .timeline-track {
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.timeline-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.timeline-track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: hsl(var(--secondary));
+  border: 1px solid var(--border-color);
+}
+
+.timeline-bar {
+  position: absolute;
+  top: 2px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.timeline-bar.planned {
+  background: hsl(var(--primary));
+}
+
+.timeline-marker {
+  position: absolute;
+  top: -3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #047857;
+}
+
+.histogram {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.histogram-row {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.histogram-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: hsl(var(--secondary));
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.histogram-bar div {
+  height: 100%;
+  background: hsl(var(--primary));
+  border-radius: inherit;
+}
+
+.owner-reliability-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.owner-reliability-row {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.owner-reliability-row strong {
+  display: block;
+}
+
+.owner-reliability-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.trend-bar {
+  width: 8px;
+  border-radius: 999px;
+  background: hsl(var(--primary));
 }
 
 .object-panel {
