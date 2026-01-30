@@ -6,6 +6,7 @@ import {
   formatDate,
   formatPercent,
   getDerived,
+  groupBy,
   inferFieldType,
   initializeState,
   normalizeFieldValue,
@@ -53,6 +54,45 @@ const useHashRoute = () => {
 
 const formatNumber = (value) =>
   Number.isFinite(value) ? value.toLocaleString() : value ?? "—";
+
+const formatSignedNumber = (value, digits = 1) => {
+  if (!Number.isFinite(value)) return "—";
+  const rounded = Number(value.toFixed(digits));
+  return rounded > 0 ? `+${rounded}` : `${rounded}`;
+};
+
+const formatMetricValue = (value, unit) =>
+  Number.isFinite(value) ? `${value}${unit ? ` ${unit}` : ""}` : "—";
+
+const getLatestSnapshot = (snapshots = []) =>
+  snapshots.reduce(
+    (latest, snap) =>
+      !latest || new Date(snap.observed_at) > new Date(latest.observed_at) ? snap : latest,
+    null
+  );
+
+const computeMetricProgress = (metric, snapshot) => {
+  if (!snapshot) return 0;
+  const baseline = Number(metric.baseline_value);
+  const target = Number(metric.target_value);
+  if (!Number.isFinite(baseline) || !Number.isFinite(target) || target === baseline) return 0;
+  if (target > baseline) {
+    return (Number(snapshot.value) - baseline) / (target - baseline);
+  }
+  return (baseline - Number(snapshot.value)) / (baseline - target);
+};
+
+const computeForecastDate = ({ targetDate, progressValue, cadenceDays = 30 }) => {
+  if (!targetDate || !Number.isFinite(progressValue) || progressValue <= 0) return null;
+  const now = new Date();
+  const target = new Date(targetDate);
+  if (Number.isNaN(target.getTime())) return null;
+  if (progressValue >= 1) return target;
+  const remaining = target.getTime() - now.getTime();
+  const projected = now.getTime() + remaining / Math.max(progressValue, 0.2);
+  const buffer = cadenceDays * 24 * 60 * 60 * 1000;
+  return new Date(projected + buffer);
+};
 
 const DerivedPanel = ({ derived, label }) => {
   if (!derived) return null;
@@ -252,6 +292,93 @@ const ChartCard = ({ title, description }) => (
     </CardHeader>
     <CardContent>
       <div className="chart-placeholder">Chart placeholder</div>
+    </CardContent>
+  </Card>
+);
+
+const ProgressIndicator = ({ value, forecast }) => (
+  <div className="progress-indicator">
+    <div className="progress-meta">
+      <span>{formatPercent(value)}</span>
+      <span className="muted">
+        Forecast: {forecast ? formatDate(forecast) : "—"}
+      </span>
+    </div>
+    <div className="progress-track">
+      <div className="progress-fill" style={{ width: `${Math.min(value * 100, 100)}%` }} />
+    </div>
+  </div>
+);
+
+const TrendlineCard = ({ title, description, items }) => (
+  <Card className="chart-card">
+    <CardHeader>
+      <CardTitle>{title}</CardTitle>
+      {description ? <CardDescription>{description}</CardDescription> : null}
+    </CardHeader>
+    <CardContent>
+      <div className="trendline-list">
+        {items.length ? (
+          items.map((item) => (
+            <div key={item.key} className="trendline-item">
+              <div className="trendline-header">
+                <strong>{item.label}</strong>
+                {item.status ? <Badge variant={item.status.variant}>{item.status.label}</Badge> : null}
+              </div>
+              <div className="trendline-metrics">
+                <span>Baseline: {item.baseline}</span>
+                <span>Target: {item.target}</span>
+                <span>Latest: {item.latest}</span>
+                <span className={item.varianceTone}>Variance: {item.variance}</span>
+              </div>
+              <div className="trendline-footnote">
+                {item.updatedAt ? `Updated ${formatDate(item.updatedAt)}` : "No snapshot yet"}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="empty-state">No KPI metrics available.</div>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const RollupCard = ({ title, description, topOutcomes, bottomOutcomes }) => (
+  <Card className="chart-card">
+    <CardHeader>
+      <CardTitle>{title}</CardTitle>
+      {description ? <CardDescription>{description}</CardDescription> : null}
+    </CardHeader>
+    <CardContent>
+      <div className="rollup-grid">
+        <div>
+          <p className="rollup-label">Top outcomes</p>
+          {topOutcomes.length ? (
+            topOutcomes.map((outcome) => (
+              <div key={outcome.id} className="rollup-item">
+                <span>{outcome.label}</span>
+                <Badge variant="secondary">{formatPercent(outcome.progress)}</Badge>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">No outcomes available.</div>
+          )}
+        </div>
+        <div>
+          <p className="rollup-label">Needs attention</p>
+          {bottomOutcomes.length ? (
+            bottomOutcomes.map((outcome) => (
+              <div key={outcome.id} className="rollup-item">
+                <span>{outcome.label}</span>
+                <Badge variant="outline">{formatPercent(outcome.progress)}</Badge>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">No outcomes flagged.</div>
+          )}
+        </div>
+      </div>
     </CardContent>
   </Card>
 );
@@ -791,7 +918,7 @@ const App = () => {
       risk_issue: ["escalate_risk_issue"],
       change_request: ["initiate_change_request"],
       consulting_engagement: ["schedule_steering_committee", "publish_exec_readout", "run_value_realization_workshop"],
-      outcome: ["run_value_realization_workshop"],
+      outcome: ["request_kpi_update", "run_value_realization_workshop"],
     };
     const actions = relevant[selectedObjectType] || [];
     return actions
@@ -842,6 +969,86 @@ const App = () => {
   const onTrackOutcomes = (state.instances.outcome || []).filter(
     (outcome) => (getDerived(state, "outcome", outcome.outcome_id, "progress_pct")?.value || 0) >= 0.6
   ).length;
+
+  const snapshotsByMetric = useMemo(() => groupBy(snapshots, (snapshot) => snapshot.metric_id), [snapshots]);
+  const metricsByOutcome = useMemo(() => groupBy(metrics, (metric) => metric.outcome_id), [metrics]);
+  const metricStats = useMemo(() => {
+    const stalledDaysThreshold = 45;
+    const stalledProgressThreshold = 0.1;
+    return metrics.map((metric) => {
+      const metricSnapshots = snapshotsByMetric[metric.metric_id] || [];
+      const latest = getLatestSnapshot(metricSnapshots);
+      const progress = computeMetricProgress(metric, latest);
+      const delta = Number(metric.target_value) - Number(metric.baseline_value);
+      const variance = latest ? Number(latest.value) - Number(metric.target_value) : null;
+      const daysSinceUpdate = latest
+        ? Math.round((new Date() - new Date(latest.observed_at)) / (1000 * 60 * 60 * 24))
+        : null;
+      const isStalled =
+        !latest ||
+        (Number.isFinite(daysSinceUpdate) && daysSinceUpdate > stalledDaysThreshold) ||
+        progress < stalledProgressThreshold;
+      return {
+        metric,
+        latest,
+        progress,
+        delta,
+        variance,
+        daysSinceUpdate,
+        isStalled,
+      };
+    });
+  }, [metrics, snapshotsByMetric]);
+
+  const outcomeStats = useMemo(() => {
+    return outcomes.map((outcome) => {
+      const outcomeMetrics = metricsByOutcome[outcome.outcome_id] || [];
+      const outcomeMetricStats = metricStats.filter((stat) => stat.metric.outcome_id === outcome.outcome_id);
+      const progressValue = getDerived(state, "outcome", outcome.outcome_id, "progress_pct")?.value || 0;
+      const confidenceValue =
+        getDerived(state, "outcome", outcome.outcome_id, "confidence_score")?.value || 0;
+      const varianceAvg = outcomeMetricStats.length
+        ? outcomeMetricStats.reduce((sum, stat) => sum + (stat.variance ?? 0), 0) / outcomeMetricStats.length
+        : 0;
+      const stalledCount = outcomeMetricStats.filter((stat) => stat.isStalled).length;
+      const forecast = computeForecastDate({
+        targetDate: outcome.target_date,
+        progressValue,
+      });
+      return {
+        outcome,
+        progressValue,
+        confidenceValue,
+        varianceAvg,
+        stalledCount,
+        metricsCount: outcomeMetrics.length,
+        forecast,
+      };
+    });
+  }, [metricsByOutcome, metricStats, outcomes, state]);
+
+  const sortedOutcomeStats = useMemo(
+    () =>
+      [...outcomeStats].sort((a, b) => (b.progressValue || 0) - (a.progressValue || 0)),
+    [outcomeStats]
+  );
+  const topOutcomes = sortedOutcomeStats.slice(0, 2);
+  const topOutcomeIds = new Set(topOutcomes.map((item) => item.outcome.outcome_id));
+  const bottomOutcomes = sortedOutcomeStats
+    .slice(-2)
+    .filter((item) => !topOutcomeIds.has(item.outcome.outcome_id));
+  const bottomOutcomeIds = new Set(bottomOutcomes.map((item) => item.outcome.outcome_id));
+
+  const avgConfidenceScore = outcomeStats.length
+    ? outcomeStats.reduce((sum, item) => sum + item.confidenceValue, 0) / outcomeStats.length
+    : 0;
+  const avgTargetDelta = metricStats.length
+    ? metricStats.reduce((sum, item) => sum + item.delta, 0) / metricStats.length
+    : 0;
+  const avgVariance = metricStats.length
+    ? metricStats.reduce((sum, item) => sum + (item.variance ?? 0), 0) / metricStats.length
+    : 0;
+  const stalledMetrics = metricStats.filter((stat) => stat.isStalled).length;
 
   const atRiskMilestones = milestones.filter(
     (milestone) => getDerived(state, "milestone", milestone.milestone_id, "at_risk_flag")?.value
@@ -1348,6 +1555,10 @@ const App = () => {
               <div className="kpi-row">
                 <KpiCard label="# Outcomes On Track" value={onTrackOutcomes} />
                 <KpiCard
+                  label="Avg confidence score"
+                  value={formatPercent(avgConfidenceScore)}
+                />
+                <KpiCard
                   label="Avg progress_pct"
                   value={formatPercent(
                     outcomes.length
@@ -1359,42 +1570,97 @@ const App = () => {
                   )}
                 />
                 <KpiCard
-                  label="# Metrics improving"
-                  value={snapshots.filter((snapshot) => snapshot.value > 0).length}
+                  label="Avg target delta"
+                  value={formatSignedNumber(avgTargetDelta, 1)}
+                  helper="Target vs baseline"
                 />
                 <KpiCard
-                  label="# Metrics stalled"
-                  value={snapshots.filter((snapshot) => snapshot.value <= 0).length}
+                  label="Avg variance to target"
+                  value={formatSignedNumber(avgVariance, 1)}
+                  helper="Latest vs target"
                 />
+                <KpiCard label="# KPIs stalled" value={stalledMetrics} />
                 <KpiCard
                   label="Data freshness"
-                  value={snapshots.length ? formatDate(snapshots[0].observed_at) : "—"}
+                  value={snapshots.length ? formatDate(getLatestSnapshot(snapshots)?.observed_at) : "—"}
                 />
               </div>
               <div className="visual-grid">
-                <ChartCard title="KPI Trendlines" description="Baseline vs target vs latest snapshots." />
-                <ChartCard title="Outcome Progress Roll-up" />
+                <TrendlineCard
+                  title="KPI Trendlines"
+                  description="Baseline, target, and latest snapshots with variance."
+                  items={metricStats.map((stat) => ({
+                    key: stat.metric.metric_id,
+                    label: stat.metric.name,
+                    baseline: formatMetricValue(stat.metric.baseline_value, stat.metric.unit),
+                    target: formatMetricValue(stat.metric.target_value, stat.metric.unit),
+                    latest: stat.latest
+                      ? formatMetricValue(stat.latest.value, stat.metric.unit)
+                      : "—",
+                    variance: stat.latest ? formatSignedNumber(stat.variance ?? 0, 1) : "—",
+                    varianceTone:
+                      stat.variance == null ? "muted" : stat.variance > 0 ? "text-positive" : "text-negative",
+                    updatedAt: stat.latest?.observed_at,
+                    status: stat.isStalled
+                      ? { label: "Stalled", variant: "outline" }
+                      : { label: "Active", variant: "secondary" },
+                  }))}
+                />
+                <RollupCard
+                  title="Outcome Progress Roll-up"
+                  description="Highlights top and bottom outcomes by progress."
+                  topOutcomes={topOutcomes.map((item) => ({
+                    id: item.outcome.outcome_id,
+                    label: item.outcome.name,
+                    progress: item.progressValue,
+                  }))}
+                  bottomOutcomes={bottomOutcomes.map((item) => ({
+                    id: item.outcome.outcome_id,
+                    label: item.outcome.name,
+                    progress: item.progressValue,
+                  }))}
+                />
               </div>
               <div className="module-grid">
                 <div className="module-main">
                   <Card className="panel">
                     <h3>Outcomes</h3>
                     <DataTable
-                      columns={["Outcome", "Owner", "Target date", "Status", "Progress"]}
-                      rows={outcomes.map((outcome) => ({
-                        key: outcome.outcome_id,
-                        Outcome: outcome.name,
-                        Owner: outcome.owner_stakeholder_id,
-                        "Target date": formatDate(outcome.target_date),
-                        Status: outcome.status,
-                        Progress: formatPercent(
-                          getDerived(state, "outcome", outcome.outcome_id, "progress_pct")?.value || 0
+                      columns={[
+                        "Outcome",
+                        "Owner",
+                        "Confidence",
+                        "Variance to target",
+                        "Stalled KPIs",
+                        "Status",
+                        "Progress",
+                      ]}
+                      rows={outcomeStats.map((entry) => ({
+                        key: entry.outcome.outcome_id,
+                        Outcome: (
+                          <div className="outcome-cell">
+                            <span>{entry.outcome.name}</span>
+                            {topOutcomeIds.has(entry.outcome.outcome_id) ? (
+                              <Badge variant="secondary">Top</Badge>
+                            ) : null}
+                            {bottomOutcomeIds.has(entry.outcome.outcome_id) ? (
+                              <Badge variant="outline">Watch</Badge>
+                            ) : null}
+                          </div>
+                        ),
+                        Owner: entry.outcome.owner_stakeholder_id,
+                        Confidence: formatPercent(entry.confidenceValue),
+                        "Variance to target": formatSignedNumber(entry.varianceAvg, 1),
+                        "Stalled KPIs": `${entry.stalledCount}/${entry.metricsCount}`,
+                        Status: entry.outcome.status,
+                        Progress: (
+                          <ProgressIndicator value={entry.progressValue} forecast={entry.forecast} />
                         ),
                         onClick: () =>
                           handleSelectObject({
                             page: "value-realization",
                             objectType: "outcome",
-                            objectId: outcome.outcome_id,
+                            objectId: entry.outcome.outcome_id,
                           }),
                       }))}
                     />

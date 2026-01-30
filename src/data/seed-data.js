@@ -362,6 +362,41 @@ export const seedInstances = {
       evidence_link: "https://bi.example.com/logistics"
     }
   ],
+  task: [
+    {
+      task_id: "task_001",
+      engagement_id: "eng_001",
+      name: "Validate stockout KPI feed",
+      description: "Confirm store-level feeds align with the agreed SKU list.",
+      status: "In Progress",
+      due_date: "2024-10-10",
+      owner_team_member_id: "tm_001",
+      priority: "High",
+      notes: "Waiting on merchandising data exports."
+    },
+    {
+      task_id: "task_002",
+      engagement_id: "eng_001",
+      name: "Finalize inventory baseline",
+      description: "Lock the baseline snapshot for Q3 stockouts.",
+      status: "Not Started",
+      due_date: "2024-10-18",
+      owner_team_member_id: "tm_002",
+      priority: "Medium",
+      notes: "Needs finance signoff."
+    },
+    {
+      task_id: "task_003",
+      engagement_id: "eng_002",
+      name: "Refresh routing cost data",
+      description: "Pull updated routing cost index from Logistics BI.",
+      status: "At Risk",
+      due_date: "2024-10-14",
+      owner_team_member_id: "tm_003",
+      priority: "High",
+      notes: "Data access pending."
+    }
+  ],
   meeting: [
     {
       meeting_id: "mtg_001",
@@ -427,10 +462,16 @@ export const seedLinks = [
   { id: "lnk_013", link_type: "milestone_produces_deliverable", from_id: "ms_003", to_id: "del_002" },
   { id: "lnk_014", link_type: "deliverable_supports_outcome", from_id: "del_001", to_id: "out_001" },
   { id: "lnk_015", link_type: "deliverable_supports_outcome", from_id: "del_002", to_id: "out_002" },
-  { id: "lnk_016", link_type: "outcome_measured_by_metric", from_id: "out_001", to_id: "metric_001" },
-  { id: "lnk_017", link_type: "outcome_measured_by_metric", from_id: "out_002", to_id: "metric_002" },
-  { id: "lnk_018", link_type: "metric_has_snapshot", from_id: "metric_001", to_id: "snap_001" },
-  { id: "lnk_019", link_type: "metric_has_snapshot", from_id: "metric_002", to_id: "snap_002" },
-  { id: "lnk_020", link_type: "engagement_has_risk_issue", from_id: "eng_001", to_id: "risk_001" },
-  { id: "lnk_021", link_type: "engagement_has_risk_issue", from_id: "eng_002", to_id: "risk_002" }
+  { id: "lnk_016", link_type: "milestone_supports_outcome", from_id: "ms_001", to_id: "out_001" },
+  { id: "lnk_017", link_type: "milestone_supports_outcome", from_id: "ms_002", to_id: "out_001" },
+  { id: "lnk_018", link_type: "milestone_supports_outcome", from_id: "ms_003", to_id: "out_002" },
+  { id: "lnk_019", link_type: "outcome_measured_by_metric", from_id: "out_001", to_id: "metric_001" },
+  { id: "lnk_020", link_type: "outcome_measured_by_metric", from_id: "out_002", to_id: "metric_002" },
+  { id: "lnk_021", link_type: "metric_has_snapshot", from_id: "metric_001", to_id: "snap_001" },
+  { id: "lnk_022", link_type: "metric_has_snapshot", from_id: "metric_002", to_id: "snap_002" },
+  { id: "lnk_023", link_type: "outcome_has_task", from_id: "out_001", to_id: "task_001" },
+  { id: "lnk_024", link_type: "outcome_has_task", from_id: "out_001", to_id: "task_002" },
+  { id: "lnk_025", link_type: "outcome_has_task", from_id: "out_002", to_id: "task_003" },
+  { id: "lnk_026", link_type: "engagement_has_risk_issue", from_id: "eng_001", to_id: "risk_001" },
+  { id: "lnk_027", link_type: "engagement_has_risk_issue", from_id: "eng_002", to_id: "risk_002" }
 ];
