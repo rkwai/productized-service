@@ -30,10 +30,12 @@ npm run preview
 Vercel will auto-detect the Vite configuration (no custom server required).
 
 ## Tests
-Install dependencies and run the happy-path Playwright checks:
+Install dependencies and run unit + Playwright checks (Playwright will boot the Vite dev server for you):
 
 ```bash
 npm install
+npx playwright install
+npm run test:unit
 npm test
 ```
 

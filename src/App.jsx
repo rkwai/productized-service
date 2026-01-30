@@ -360,36 +360,6 @@ const ObjectListPanel = ({ state, objectTypeId, onUpdateRecord, onDeleteRecord, 
   const referenceMap = buildReferenceMap(state.config, state.instances);
   const isViewer = state.role === "Viewer";
 
-  const portfolioBulkActions = [
-    {
-      id: "assign_owner",
-      description: "Assign a primary owner to the selected accounts.",
-      parameters: ["owner", "account_ids"],
-      side_effects: ["update_account_owner", "notify_owner"],
-    },
-    {
-      id: "create_task",
-      description: "Create a follow-up task tied to the selected accounts.",
-      parameters: ["task_title", "due_date", "account_ids"],
-      side_effects: ["create_task", "notify_account_team"],
-    },
-  ];
-
-  const portfolioExportActions = [
-    {
-      id: "schedule_export",
-      description: "Schedule a recurring export or portfolio report.",
-      parameters: ["export_type", "frequency", "recipients"],
-      side_effects: ["schedule_export_job", "email_report"],
-    },
-    {
-      id: "generate_export",
-      description: "Generate an on-demand portfolio export.",
-      parameters: ["export_type", "format", "recipients"],
-      side_effects: ["generate_export", "deliver_export"],
-    },
-  ];
-
   return (
     <div className="space-y-4">
       <div className="card-grid">
@@ -570,6 +540,55 @@ const TrendBars = ({ values }) => (
         style={{ height: `${Math.max(12, Math.round(value * 48))}px` }}
       />
     ))}
+  </div>
+);
+
+const TrendIndicator = ({ value }) => {
+  if (!Number.isFinite(value)) {
+    return <span className="trend-indicator flat">No trend</span>;
+  }
+  const tone = value > 0 ? "up" : value < 0 ? "down" : "flat";
+  return <span className={`trend-indicator ${tone}`}>{formatSignedNumber(value, 0)} pts</span>;
+};
+
+const RiskValueScatter = ({ data }) => {
+  const maxValue = Math.max(1, ...data.map((item) => Number(item.value || 0)));
+  const segmentColors = ["#2563eb", "#16a34a", "#f97316", "#dc2626", "#0f172a"];
+  const pickColor = (segment) => {
+    const key = String(segment || "");
+    let hash = 0;
+    for (let i = 0; i < key.length; i += 1) {
+      hash = (hash + key.charCodeAt(i)) % segmentColors.length;
+    }
+    return segmentColors[hash];
+  };
+
+  return (
+    <div className="scatter-plot">
+      {data.map((item) => (
+        <span
+          key={item.id}
+          className="scatter-dot"
+          style={{
+            left: `${(Number(item.value || 0) / maxValue) * 100}%`,
+            bottom: `${clamp(Number(item.risk || 0), 0, 100)}%`,
+            background: pickColor(item.segment),
+          }}
+          title={`${item.segment || "Segment"} · Risk ${item.risk} · $${formatNumber(item.value)}`}
+        />
+      ))}
+    </div>
+  );
+};
+
+const HealthTrendChart = ({ data }) => (
+  <div className="trend-chart">
+    <TrendBars values={data.map((item) => (Number.isFinite(item.value) ? item.value / 100 : 0))} />
+    <div className="trend-labels">
+      {data.map((item) => (
+        <span key={item.label}>{item.label}</span>
+      ))}
+    </div>
   </div>
 );
 
@@ -1218,7 +1237,6 @@ const App = () => {
   const decisions = state?.instances.decision || [];
   const changeRequests = state?.instances.change_request || [];
   const stakeholders = state?.instances.stakeholder || [];
-  const teamMembers = state?.instances.team_member || [];
   const statementsOfWork = state?.instances.statement_of_work || [];
   const metrics = state?.instances.kpi_metric || [];
   const snapshots = state?.instances.kpi_snapshot || [];
@@ -1390,6 +1408,41 @@ const App = () => {
     return regionMatches && segmentMatches && accountMatches;
   });
 
+  const accountSignals = filteredAccounts.map((account) => {
+    const healthValue =
+      getDerived(state, "client_account", account.account_id, "health_score")?.value ??
+      account.health_score;
+    const riskValue =
+      getDerived(state, "client_account", account.account_id, "renewal_risk_score")?.value ??
+      account.renewal_risk_score;
+    const churnValue =
+      getDerived(state, "client_account", account.account_id, "churn_risk_score")?.value ??
+      account.churn_risk_score;
+    const freshnessDays =
+      getDerived(state, "client_account", account.account_id, "data_freshness_days")?.value ??
+      null;
+    const missingFields =
+      getDerived(state, "client_account", account.account_id, "missing_data_fields")?.value ??
+      [];
+    const ltvAtRisk =
+      getDerived(state, "client_account", account.account_id, "ltv_at_risk")?.value ??
+      0;
+    const segmentValue =
+      getDerived(state, "client_account", account.account_id, "segment_tag")?.value ??
+      account.segment_tag;
+
+    return {
+      account,
+      healthValue,
+      riskValue,
+      churnValue,
+      freshnessDays,
+      missingFields: Array.isArray(missingFields) ? missingFields : [],
+      ltvAtRisk,
+      segmentValue,
+    };
+  });
+
   const accountInsights = filteredAccounts.map((account) => {
     const health = getDerived(state, "client_account", account.account_id, "health_score");
     const risk = getDerived(state, "client_account", account.account_id, "renewal_risk_score");
@@ -1420,6 +1473,12 @@ const App = () => {
     ({ risk }) => (risk?.value || 0) >= RENEWAL_RISK_THRESHOLD
   ).length;
 
+  const pipelineRiskExposure = accountInsights
+    .filter(({ risk, account }) => (risk?.value ?? account.renewal_risk_score ?? 0) >= RENEWAL_RISK_THRESHOLD)
+    .sort((a, b) => (b.risk?.value || 0) - (a.risk?.value || 0))
+    .slice(0, 5)
+    .reduce((sum, { account }) => sum + Number(account.total_contract_value_to_date || 0), 0);
+
   const attentionAccounts = homeTopRiskOnly
     ? [...accountInsights].sort((a, b) => (b.risk?.value || 0) - (a.risk?.value || 0)).slice(0, 10)
     : attentionCandidates.slice(0, 6);
@@ -1444,9 +1503,21 @@ const App = () => {
       )
     : 0;
 
+  const avgChurnRisk = accountSignals.length
+    ? Math.round(accountSignals.reduce((sum, item) => sum + (item.churnValue || 0), 0) / accountSignals.length)
+    : 0;
+
+  const totalLtvAtRisk = accountSignals.reduce((sum, item) => sum + (Number(item.ltvAtRisk) || 0), 0);
+
   const freshAccounts = accountSignals.filter((item) => Number.isFinite(item.freshnessDays) && item.freshnessDays <= 30)
     .length;
   const missingDataAccounts = accountSignals.filter((item) => item.missingFields.length).length;
+  const freshnessValues = accountSignals
+    .map((item) => item.freshnessDays)
+    .filter((value) => Number.isFinite(value));
+  const avgFreshnessDays = freshnessValues.length
+    ? Math.round(freshnessValues.reduce((sum, value) => sum + value, 0) / freshnessValues.length)
+    : 0;
 
   const buildBreakdown = (items, keyFn) => {
     const groups = items.reduce((acc, item) => {
@@ -1469,15 +1540,9 @@ const App = () => {
     });
   };
 
-  const segmentBreakdown = useMemo(
-    () => buildBreakdown(accountSignals, (item) => item.segmentValue),
-    [accountSignals, avgHealth, avgRisk]
-  );
+  const segmentBreakdown = buildBreakdown(accountSignals, (item) => item.segmentValue);
 
-  const regionBreakdown = useMemo(
-    () => buildBreakdown(accountSignals, (item) => item.account.region),
-    [accountSignals, avgHealth, avgRisk]
-  );
+  const regionBreakdown = buildBreakdown(accountSignals, (item) => item.account.region);
 
   const segmentCohortRows = segmentBreakdown.map((segment) => ({
     key: `segment-${segment.key}`,
@@ -1519,67 +1584,61 @@ const App = () => {
     (outcome) => (getDerived(state, "outcome", outcome.outcome_id, "progress_pct")?.value || 0) >= 0.6
   ).length;
 
-  const snapshotsByMetric = useMemo(() => groupBy(snapshots, (snapshot) => snapshot.metric_id), [snapshots]);
-  const metricsByOutcome = useMemo(() => groupBy(metrics, (metric) => metric.outcome_id), [metrics]);
-  const metricStats = useMemo(() => {
-    const stalledDaysThreshold = 45;
-    const stalledProgressThreshold = 0.1;
-    return metrics.map((metric) => {
-      const metricSnapshots = snapshotsByMetric[metric.metric_id] || [];
-      const latest = getLatestSnapshot(metricSnapshots);
-      const progress = computeMetricProgress(metric, latest);
-      const delta = Number(metric.target_value) - Number(metric.baseline_value);
-      const variance = latest ? Number(latest.value) - Number(metric.target_value) : null;
-      const daysSinceUpdate = latest
-        ? Math.round((new Date() - new Date(latest.observed_at)) / (1000 * 60 * 60 * 24))
-        : null;
-      const isStalled =
-        !latest ||
-        (Number.isFinite(daysSinceUpdate) && daysSinceUpdate > stalledDaysThreshold) ||
-        progress < stalledProgressThreshold;
-      return {
-        metric,
-        latest,
-        progress,
-        delta,
-        variance,
-        daysSinceUpdate,
-        isStalled,
-      };
-    });
-  }, [metrics, snapshotsByMetric]);
+  const snapshotsByMetric = groupBy(snapshots, (snapshot) => snapshot.metric_id);
+  const metricsByOutcome = groupBy(metrics, (metric) => metric.outcome_id);
+  const stalledDaysThreshold = 45;
+  const stalledProgressThreshold = 0.1;
+  const metricStats = metrics.map((metric) => {
+    const metricSnapshots = snapshotsByMetric[metric.metric_id] || [];
+    const latest = getLatestSnapshot(metricSnapshots);
+    const progress = computeMetricProgress(metric, latest);
+    const delta = Number(metric.target_value) - Number(metric.baseline_value);
+    const variance = latest ? Number(latest.value) - Number(metric.target_value) : null;
+    const daysSinceUpdate = latest
+      ? Math.round((new Date() - new Date(latest.observed_at)) / (1000 * 60 * 60 * 24))
+      : null;
+    const isStalled =
+      !latest ||
+      (Number.isFinite(daysSinceUpdate) && daysSinceUpdate > stalledDaysThreshold) ||
+      progress < stalledProgressThreshold;
+    return {
+      metric,
+      latest,
+      progress,
+      delta,
+      variance,
+      daysSinceUpdate,
+      isStalled,
+    };
+  });
 
-  const outcomeStats = useMemo(() => {
-    return outcomes.map((outcome) => {
-      const outcomeMetrics = metricsByOutcome[outcome.outcome_id] || [];
-      const outcomeMetricStats = metricStats.filter((stat) => stat.metric.outcome_id === outcome.outcome_id);
-      const progressValue = getDerived(state, "outcome", outcome.outcome_id, "progress_pct")?.value || 0;
-      const confidenceValue =
-        getDerived(state, "outcome", outcome.outcome_id, "confidence_score")?.value || 0;
-      const varianceAvg = outcomeMetricStats.length
-        ? outcomeMetricStats.reduce((sum, stat) => sum + (stat.variance ?? 0), 0) / outcomeMetricStats.length
-        : 0;
-      const stalledCount = outcomeMetricStats.filter((stat) => stat.isStalled).length;
-      const forecast = computeForecastDate({
-        targetDate: outcome.target_date,
-        progressValue,
-      });
-      return {
-        outcome,
-        progressValue,
-        confidenceValue,
-        varianceAvg,
-        stalledCount,
-        metricsCount: outcomeMetrics.length,
-        forecast,
-      };
+  const outcomeStats = outcomes.map((outcome) => {
+    const outcomeMetrics = metricsByOutcome[outcome.outcome_id] || [];
+    const outcomeMetricStats = metricStats.filter((stat) => stat.metric.outcome_id === outcome.outcome_id);
+    const progressValue = getDerived(state, "outcome", outcome.outcome_id, "progress_pct")?.value || 0;
+    const confidenceValue =
+      getDerived(state, "outcome", outcome.outcome_id, "confidence_score")?.value || 0;
+    const varianceAvg = outcomeMetricStats.length
+      ? outcomeMetricStats.reduce((sum, stat) => sum + (stat.variance ?? 0), 0) / outcomeMetricStats.length
+      : 0;
+    const stalledCount = outcomeMetricStats.filter((stat) => stat.isStalled).length;
+    const forecast = computeForecastDate({
+      targetDate: outcome.target_date,
+      progressValue,
     });
-  }, [metricsByOutcome, metricStats, outcomes, state]);
+    return {
+      outcome,
+      progressValue,
+      confidenceValue,
+      varianceAvg,
+      stalledCount,
+      metricsCount: outcomeMetrics.length,
+      forecast,
+    };
+  });
 
-  const sortedOutcomeStats = useMemo(
-    () =>
-      [...outcomeStats].sort((a, b) => (b.progressValue || 0) - (a.progressValue || 0)),
-    [outcomeStats]
+  const sortedOutcomeStats = [...outcomeStats].sort(
+    (a, b) => (b.progressValue || 0) - (a.progressValue || 0)
   );
   const topOutcomes = sortedOutcomeStats.slice(0, 2);
   const topOutcomeIds = new Set(topOutcomes.map((item) => item.outcome.outcome_id));
@@ -1602,6 +1661,15 @@ const App = () => {
   const atRiskMilestones = milestones.filter(
     (milestone) => getDerived(state, "milestone", milestone.milestone_id, "at_risk_flag")?.value
   ).length;
+
+  const milestoneReliability = milestones.length
+    ? 100 - Math.round((atRiskMilestones / milestones.length) * 100)
+    : 100;
+  const inverseRenewalRisk = 100 - avgRisk;
+  const portfolioHealthScore = clampScore(
+    avgHealth * 0.4 + inverseRenewalRisk * 0.25 + milestoneReliability * 0.2 + avgConfidenceScore * 100 * 0.15
+  );
+  const portfolioHealthTrend = Math.round((avgHealth - avgRisk) / 10);
 
   const openHighRisks = risks.filter((risk) => risk.severity === "High" && risk.status !== "Resolved").length;
 
@@ -1678,6 +1746,70 @@ const App = () => {
     };
   });
 
+  const workstreamsByEngagementId = groupBy(workstreams, (workstream) => workstream.engagement_id);
+  const milestonesByWorkstreamId = groupBy(milestones, (milestone) => milestone.workstream_id);
+  const risksByEngagementId = groupBy(risks, (risk) => risk.engagement_id);
+  const statementsByEngagementId = groupBy(statementsOfWork, (sow) => sow.engagement_id);
+  const changeRequestsBySowId = groupBy(changeRequests, (request) => request.sow_id);
+  const stakeholdersByAccountId = groupBy(stakeholders, (stakeholder) => stakeholder.account_id);
+
+  const engagementSignals = engagements.map((engagement) => {
+    const engagementWorkstreams = workstreamsByEngagementId[engagement.engagement_id] || [];
+    const engagementMilestones = engagementWorkstreams.flatMap(
+      (workstream) => milestonesByWorkstreamId[workstream.workstream_id] || []
+    );
+    const completedMilestones = engagementMilestones.filter((milestone) => milestone.status === "Completed");
+    const completionRate =
+      getDerived(state, "consulting_engagement", engagement.engagement_id, "completion_rate")?.value ??
+      (engagementMilestones.length ? completedMilestones.length / engagementMilestones.length : 0);
+    const milestoneOnTimeRate = engagementWorkstreams.length
+      ? engagementWorkstreams.reduce(
+          (sum, workstream) =>
+            sum +
+            (getDerived(state, "workstream", workstream.workstream_id, "milestone_on_time_rate")?.value || 0),
+          0
+        ) / engagementWorkstreams.length
+      : 0;
+    const engagementRisks = risksByEngagementId[engagement.engagement_id] || [];
+    const openRisks = engagementRisks.filter((risk) => risk.status !== "Resolved");
+    const highRisks = openRisks.filter((risk) => risk.severity === "High");
+    const sows = statementsByEngagementId[engagement.engagement_id] || [];
+    const activeScopeChanges = sows
+      .flatMap((sow) => changeRequestsBySowId[sow.sow_id] || [])
+      .filter(
+        (request) =>
+          !["Approved", "Rejected", "Closed", "Completed", "Cancelled"].includes(request.status || "")
+      );
+    const accountStakeholders = stakeholdersByAccountId[engagement.account_id] || [];
+    const sentimentScore = accountStakeholders.length
+      ? accountStakeholders.reduce((sum, stakeholder) => sum + Number(stakeholder.sentiment_score || 0), 0) /
+        accountStakeholders.length
+      : 0;
+    const healthScore = Number(engagement.engagement_health_score || 0);
+    const healthStatus = getHealthStatus(healthScore);
+    const riskPenalty = Math.min(35, openRisks.length * 4 + highRisks.length * 6 + (activeScopeChanges.length ? 6 : 0));
+    const renewalForecastScore = clampScore(healthScore * 0.55 + completionRate * 100 * 0.45 - riskPenalty);
+
+    return {
+      id: engagement.engagement_id,
+      name: engagement.engagement_name,
+      engagement,
+      owner: teamMemberMap.get(engagement.engagement_lead_team_member_id)?.name || engagement.engagement_lead_team_member_id,
+      renewalDate: engagement.renewal_date,
+      healthScore,
+      healthStatus,
+      openRisks,
+      highRisks,
+      activeScopeChanges,
+      completionRate,
+      milestoneOnTimeRate,
+      sentimentScore,
+      renewalForecastScore,
+    };
+  });
+
+  const lowHealthEngagements = engagementSignals.filter((signal) => signal.healthStatus.label === "Low");
+
   const filterOptions = {
     regions: Array.from(new Set(accounts.map((account) => account.region))).filter(Boolean),
     segments: Array.from(
@@ -1710,6 +1842,36 @@ const App = () => {
       { label: "Complete", value: "complete" },
     ],
   };
+
+  const portfolioBulkActions = [
+    {
+      id: "assign_owner",
+      description: "Assign a primary owner to the selected accounts.",
+      parameters: ["owner", "account_ids"],
+      side_effects: ["update_account_owner", "notify_owner"],
+    },
+    {
+      id: "create_task",
+      description: "Create a follow-up task tied to the selected accounts.",
+      parameters: ["task_title", "due_date", "account_ids"],
+      side_effects: ["create_task", "notify_account_team"],
+    },
+  ];
+
+  const portfolioExportActions = [
+    {
+      id: "schedule_export",
+      description: "Schedule a recurring export or portfolio report.",
+      parameters: ["export_type", "frequency", "recipients"],
+      side_effects: ["schedule_export_job", "email_report"],
+    },
+    {
+      id: "generate_export",
+      description: "Generate an on-demand portfolio export.",
+      parameters: ["export_type", "format", "recipients"],
+      side_effects: ["generate_export", "deliver_export"],
+    },
+  ];
 
   const portfolioHealthTier = (value) => {
     if (!Number.isFinite(value)) return "critical";
@@ -1759,7 +1921,7 @@ const App = () => {
 
   const visiblePortfolioColumns = PORTFOLIO_COLUMNS.filter((column) => portfolioColumns.includes(column));
 
-  const portfolioGroupedRows = useMemo(() => {
+  const portfolioGroupedRows = (() => {
     if (portfolioGroupBy === "none") {
       return portfolioFilteredAccounts.map((item) => ({ type: "row", item }));
     }
@@ -1774,88 +1936,75 @@ const App = () => {
       { type: "group", key, count: items.length },
       ...items.map((item) => ({ type: "row", item })),
     ]);
-  }, [portfolioFilteredAccounts, portfolioGroupBy]);
+  })();
 
-  const portfolioTableRows = useMemo(
-    () =>
-      portfolioGroupedRows.map((entry) => {
-        if (entry.type === "group") {
-          return {
-            key: `group-${entry.key}`,
-            className: "table-group-row",
-            Select: "",
-            Account: (
-              <div className="group-label">
-                <strong>{portfolioGroupBy === "region" ? "Region" : "Segment"}:</strong> {entry.key}
-                <span>{entry.count} accounts</span>
-              </div>
-            ),
-            Industry: "",
-            Region: "",
-            Segment: "",
-            Health: "",
-            "Renewal risk": "",
-            "Churn risk": "",
-            "Data freshness": "",
-            "Missing data": "",
-            "Total value": "",
-            "Estimated LTV": "",
-            "LTV at risk": "",
-          };
-        }
-        const { account, healthValue, riskValue, churnValue, freshnessDays, missingFields, ltvAtRisk, segmentValue } =
-          entry.item;
-        const isSelected = selectedPortfolioAccounts.includes(account.account_id);
-        return {
-          key: account.account_id,
-          Select: (
-            <div className="checkbox-cell" onClick={(event) => event.stopPropagation()}>
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={(checked) => setPortfolioSelection(account.account_id, Boolean(checked))}
-                disabled={isViewer}
-                aria-label={`Select ${account.account_name}`}
-              />
-            </div>
-          ),
-          Account: account.account_name,
-          Industry: account.industry,
-          Region: account.region,
-          Segment: segmentValue,
-          Health: <StatusPill label={healthValue ?? "—"} tone={getHealthTone(healthValue)} />,
-          "Renewal risk": <StatusPill label={riskValue ?? "—"} tone={getRiskTone(riskValue)} />,
-          "Churn risk": <StatusPill label={churnValue ?? "—"} tone={getRiskTone(churnValue)} />,
-          "Data freshness": (
-            <StatusPill label={formatDays(freshnessDays)} tone={getFreshnessTone(freshnessDays)} />
-          ),
-          "Missing data": missingFields.length ? (
-            <div className="missing-data">
-              <StatusPill label={`${missingFields.length} gaps`} tone="status-pill--warn" />
-              <span>{missingFields.slice(0, 2).map(toTitle).join(", ")}</span>
-            </div>
-          ) : (
-            <StatusPill label="Complete" tone="status-pill--good" />
-          ),
-          "Total value": formatNumber(account.total_contract_value_to_date),
-          "Estimated LTV": formatNumber(account.estimated_ltv),
-          "LTV at risk": formatNumber(ltvAtRisk),
-          onClick: () =>
-            handleSelectObject({
-              page: "portfolio",
-              objectType: "client_account",
-              objectId: account.account_id,
-            }),
-        };
-      }),
-    [
-      handleSelectObject,
-      isViewer,
-      portfolioGroupBy,
-      portfolioGroupedRows,
-      selectedPortfolioAccounts,
-      setPortfolioSelection,
-    ]
-  );
+  const portfolioTableRows = portfolioGroupedRows.map((entry) => {
+    if (entry.type === "group") {
+      return {
+        key: `group-${entry.key}`,
+        className: "table-group-row",
+        Select: "",
+        Account: (
+          <div className="group-label">
+            <strong>{portfolioGroupBy === "region" ? "Region" : "Segment"}:</strong> {entry.key}
+            <span>{entry.count} accounts</span>
+          </div>
+        ),
+        Industry: "",
+        Region: "",
+        Segment: "",
+        Health: "",
+        "Renewal risk": "",
+        "Churn risk": "",
+        "Data freshness": "",
+        "Missing data": "",
+        "Total value": "",
+        "Estimated LTV": "",
+        "LTV at risk": "",
+      };
+    }
+    const { account, healthValue, riskValue, churnValue, freshnessDays, missingFields, ltvAtRisk, segmentValue } =
+      entry.item;
+    const isSelected = selectedPortfolioAccounts.includes(account.account_id);
+    return {
+      key: account.account_id,
+      Select: (
+        <div className="checkbox-cell" onClick={(event) => event.stopPropagation()}>
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={(checked) => setPortfolioSelection(account.account_id, Boolean(checked))}
+            disabled={isViewer}
+            aria-label={`Select ${account.account_name}`}
+          />
+        </div>
+      ),
+      Account: account.account_name,
+      Industry: account.industry,
+      Region: account.region,
+      Segment: segmentValue,
+      Health: <StatusPill label={healthValue ?? "—"} tone={getHealthTone(healthValue)} />,
+      "Renewal risk": <StatusPill label={riskValue ?? "—"} tone={getRiskTone(riskValue)} />,
+      "Churn risk": <StatusPill label={churnValue ?? "—"} tone={getRiskTone(churnValue)} />,
+      "Data freshness": <StatusPill label={formatDays(freshnessDays)} tone={getFreshnessTone(freshnessDays)} />,
+      "Missing data": missingFields.length ? (
+        <div className="missing-data">
+          <StatusPill label={`${missingFields.length} gaps`} tone="status-pill--warn" />
+          <span>{missingFields.slice(0, 2).map(toTitle).join(", ")}</span>
+        </div>
+      ) : (
+        <StatusPill label="Complete" tone="status-pill--good" />
+      ),
+      "Total value": formatNumber(account.total_contract_value_to_date),
+      "Estimated LTV": formatNumber(account.estimated_ltv),
+      "LTV at risk": formatNumber(ltvAtRisk),
+      onClick: () =>
+        handleSelectObject({
+          page: "portfolio",
+          objectType: "client_account",
+          objectId: account.account_id,
+        }),
+    };
+  });
 
   const configMetadata = {
     company_name: state.config.client_metadata.company_name,
