@@ -148,6 +148,22 @@ export const initialData = {
         ],
       },
       {
+        id: "task",
+        description:
+          "A concrete task or follow-up required to advance a milestone or outcome.",
+        properties: [
+          "task_id",
+          "engagement_id",
+          "name",
+          "description",
+          "status",
+          "due_date",
+          "owner_team_member_id",
+          "priority",
+          "notes",
+        ],
+      },
+      {
         id: "decision",
         description:
           "A formal client/program decision that unblocks progress or commits the client to a path (scope, prioritization, operating model, investment).",
@@ -336,10 +352,22 @@ export const initialData = {
         description: "Connects artifacts to intended business results (traceability from work to value).",
       },
       {
+        id: "milestone_supports_outcome",
+        from: "milestone",
+        to: "outcome",
+        description: "Links milestones directly to the outcomes they unlock.",
+      },
+      {
         id: "outcome_measured_by_metric",
         from: "outcome",
         to: "kpi_metric",
         description: "Maps outcomes to concrete KPI definitions.",
+      },
+      {
+        id: "outcome_has_task",
+        from: "outcome",
+        to: "task",
+        description: "Tracks follow-up tasks required to update or advance outcomes.",
       },
       {
         id: "metric_has_snapshot",
@@ -417,6 +445,12 @@ export const initialData = {
         logic:
           "Outcome progress computed by comparing latest kpi_snapshot.value against kpi_metric.baseline_value and target_value; roll up across metrics for an overall outcome_progress_pct.",
         output: "derived_property:outcome.progress_pct",
+      },
+      {
+        id: "calculate_outcome_confidence",
+        logic:
+          "Outcome confidence score derived from KPI coverage, update recency, and evidence completeness to communicate data trustworthiness.",
+        output: "derived_property:outcome.confidence_score",
       },
       {
         id: "value_realization_signal",
@@ -548,6 +582,23 @@ export const initialData = {
           "create_meeting",
           "update_kpi_metric_definitions",
           "log_agreed_baselines_and_targets",
+        ],
+      },
+      {
+        id: "request_kpi_update",
+        description:
+          "Requests an updated KPI snapshot or evidence refresh to keep value realization data current.",
+        parameters: [
+          "outcome_id",
+          "metric_ids",
+          "requested_by",
+          "requested_due_date",
+          "message",
+        ],
+        side_effects: [
+          "notify_kpi_data_owner",
+          "create_followup_task",
+          "log_kpi_update_request",
         ],
       },
     ],

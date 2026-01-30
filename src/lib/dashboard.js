@@ -110,6 +110,7 @@ export const computeDerived = (state) => {
 
   (instances.outcome || []).forEach((outcome) => {
     const metrics = metricsByOutcome[outcome.outcome_id] || [];
+    const snapshotRecencyWindowDays = 45;
     const progress = metrics.reduce((acc, metric) => {
       const snapshots = snapshotsByMetric[metric.metric_id] || [];
       if (snapshots.length === 0) return acc;
@@ -134,6 +135,43 @@ export const computeDerived = (state) => {
               (snap) => Number(snap.value) >= Number(metric.target_value)
             )
         ).length,
+      },
+    });
+
+    const confidenceInputs = metrics.map((metric) => {
+      const snapshots = snapshotsByMetric[metric.metric_id] || [];
+      if (snapshots.length === 0) {
+        return { has_snapshot: false, recency_score: 0, days_since_update: null };
+      }
+      const latest = snapshots.reduce((latestSnap, snap) =>
+        new Date(snap.observed_at) > new Date(latestSnap.observed_at) ? snap : latestSnap
+      );
+      const daysSince = Math.max(
+        0,
+        Math.round((new Date(now) - new Date(latest.observed_at)) / (1000 * 60 * 60 * 24))
+      );
+      const recencyScore = Math.max(0, 1 - Math.min(daysSince / snapshotRecencyWindowDays, 1));
+      return { has_snapshot: true, recency_score: Number(recencyScore.toFixed(2)), days_since_update: daysSince };
+    });
+    const snapshotCoverage = metrics.length
+      ? confidenceInputs.filter((input) => input.has_snapshot).length / metrics.length
+      : 0;
+    const avgRecency = confidenceInputs.length
+      ? confidenceInputs.reduce((sum, item) => sum + item.recency_score, 0) / confidenceInputs.length
+      : 0;
+    const confidenceScore = metrics.length ? snapshotCoverage * 0.6 + avgRecency * 0.4 : 0;
+    setDerived(state, {
+      object_type: "outcome",
+      object_id: outcome.outcome_id,
+      field: "confidence_score",
+      value: Number(confidenceScore.toFixed(2)),
+      computed_at: now,
+      explanation_json: {
+        metrics: metrics.length,
+        snapshot_coverage: Number(snapshotCoverage.toFixed(2)),
+        avg_recency_score: Number(avgRecency.toFixed(2)),
+        recency_window_days: snapshotRecencyWindowDays,
+        inputs: confidenceInputs,
       },
     });
   });
