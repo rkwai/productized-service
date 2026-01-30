@@ -118,6 +118,18 @@ const PORTFOLIO_VIEW_PRESETS = [
   },
 ];
 
+const getHealthStatus = (score) => {
+  if (score >= 80) {
+    return { label: "Healthy", className: "border border-emerald-200 bg-emerald-100 text-emerald-800" };
+  }
+  if (score >= 65) {
+    return { label: "Watch", className: "border border-amber-200 bg-amber-100 text-amber-800" };
+  }
+  return { label: "Low", className: "border border-rose-200 bg-rose-100 text-rose-800" };
+};
+
+const clampScore = (value) => Math.max(0, Math.min(100, Math.round(value)));
+
 const DerivedPanel = ({ derived, label }) => {
   if (!derived) return null;
   return (
@@ -856,6 +868,9 @@ const App = () => {
   const meetings = state?.instances.meeting || [];
   const decisions = state?.instances.decision || [];
   const changeRequests = state?.instances.change_request || [];
+  const stakeholders = state?.instances.stakeholder || [];
+  const teamMembers = state?.instances.team_member || [];
+  const statementsOfWork = state?.instances.statement_of_work || [];
   const metrics = state?.instances.kpi_metric || [];
   const snapshots = state?.instances.kpi_snapshot || [];
 
@@ -933,7 +948,12 @@ const App = () => {
       milestone: ["replan_milestone", "escalate_risk_issue"],
       risk_issue: ["escalate_risk_issue"],
       change_request: ["initiate_change_request"],
-      consulting_engagement: ["schedule_steering_committee", "publish_exec_readout", "run_value_realization_workshop"],
+      consulting_engagement: [
+        "schedule_steering_committee",
+        "publish_exec_readout",
+        "run_value_realization_workshop",
+        "launch_recovery_playbook",
+      ],
       outcome: ["run_value_realization_workshop"],
     };
     const actions = relevant[selectedObjectType] || [];
@@ -945,6 +965,97 @@ const App = () => {
         onClick: () => setActionSheet({ action, context: selectedObjectRecord || {} }),
       }));
   }, [actionMap, selectedObjectRecord, selectedObjectType, state]);
+
+  const engagementSignals = useMemo(() => {
+    if (!state) return [];
+    const workstreamById = Object.fromEntries(workstreams.map((workstream) => [workstream.workstream_id, workstream]));
+    const workstreamsByEngagement = workstreams.reduce((acc, workstream) => {
+      if (!workstream.engagement_id) return acc;
+      acc[workstream.engagement_id] = acc[workstream.engagement_id] || [];
+      acc[workstream.engagement_id].push(workstream);
+      return acc;
+    }, {});
+    const milestonesByEngagement = milestones.reduce((acc, milestone) => {
+      const engagementId = workstreamById[milestone.workstream_id]?.engagement_id;
+      if (!engagementId) return acc;
+      acc[engagementId] = acc[engagementId] || [];
+      acc[engagementId].push(milestone);
+      return acc;
+    }, {});
+    const engagementAccountMap = (state.links || []).reduce((acc, link) => {
+      if (link.link_type === "account_has_engagement") {
+        acc[link.to_id] = link.from_id;
+      }
+      return acc;
+    }, {});
+    const sowEngagementMap = statementsOfWork.reduce((acc, sow) => {
+      if (sow.sow_id && sow.engagement_id) {
+        acc[sow.sow_id] = sow.engagement_id;
+      }
+      return acc;
+    }, {});
+
+    return engagements.map((engagement) => {
+      const engagementWorkstreams = workstreamsByEngagement[engagement.engagement_id] || [];
+      const engagementMilestones = milestonesByEngagement[engagement.engagement_id] || [];
+      const engagementRisks = risks.filter((risk) => risk.engagement_id === engagement.engagement_id);
+      const openRisks = engagementRisks.filter((risk) => risk.status !== "Resolved");
+      const highRisks = openRisks.filter((risk) => risk.severity === "High");
+      const accountId = engagementAccountMap[engagement.engagement_id];
+      const accountStakeholders = stakeholders.filter((stakeholder) => stakeholder.account_id === accountId);
+      const sponsor = stakeholders.find(
+        (stakeholder) => stakeholder.stakeholder_id === engagement.executive_sponsor_stakeholder_id
+      );
+      const sentimentScore =
+        sponsor?.sentiment_score ||
+        (accountStakeholders.length
+          ? accountStakeholders.reduce((sum, stakeholder) => sum + Number(stakeholder.sentiment_score || 0), 0) /
+            accountStakeholders.length
+          : 0);
+      const completionRate =
+        getDerived(state, "consulting_engagement", engagement.engagement_id, "completion_rate")?.value || 0;
+      const milestoneOnTimeRate = engagementWorkstreams.length
+        ? engagementWorkstreams.reduce(
+            (sum, workstream) =>
+              sum + (getDerived(state, "workstream", workstream.workstream_id, "milestone_on_time_rate")?.value || 0),
+            0
+          ) / engagementWorkstreams.length
+        : 0;
+      const scopeChangeRequests = changeRequests.filter(
+        (change) => sowEngagementMap[change.sow_id] === engagement.engagement_id
+      );
+      const activeScopeChanges = scopeChangeRequests.filter((change) => change.status !== "Approved");
+      const engagementOwner = teamMembers.find(
+        (member) => member.team_member_id === engagement.engagement_lead_team_member_id
+      );
+      const renewalForecastScore = clampScore(
+        engagement.engagement_health_score * 0.6 +
+          completionRate * 100 * 0.2 +
+          sentimentScore * 100 * 0.15 -
+          openRisks.length * 4 -
+          highRisks.length * 4 -
+          (activeScopeChanges.length ? 5 : 0)
+      );
+      return {
+        id: engagement.engagement_id,
+        name: engagement.engagement_name,
+        healthScore: engagement.engagement_health_score,
+        healthStatus: getHealthStatus(engagement.engagement_health_score),
+        owner: engagementOwner?.name || engagement.engagement_lead_team_member_id,
+        renewalDate: engagement.renewal_date,
+        completionRate,
+        milestoneOnTimeRate,
+        sentimentScore,
+        openRisks,
+        highRisks,
+        engagementMilestones,
+        scopeChangeRequests,
+        activeScopeChanges,
+        renewalForecastScore,
+        engagement,
+      };
+    });
+  }, [changeRequests, engagements, milestones, risks, stakeholders, statementsOfWork, teamMembers, workstreams, state]);
 
   if (!state) {
     return <div className="loading">Loading workspace…</div>;
@@ -1087,6 +1198,8 @@ const App = () => {
   const openHighRisks = risks.filter((risk) => risk.severity === "High" && risk.status !== "Resolved").length;
 
   const overdueInvoices = invoices.filter((invoice) => invoice.status === "Overdue").length;
+
+  const lowHealthEngagements = engagementSignals.filter((signal) => signal.healthScore < 65);
 
   const filterOptions = {
     regions: Array.from(new Set(accounts.map((account) => account.region))).filter(Boolean),
@@ -1314,6 +1427,20 @@ const App = () => {
         })),
     },
     {
+      id: "critical-engagements",
+      label: "Critical engagements (low health)",
+      rows: lowHealthEngagements.map((signal) => ({
+        key: signal.id,
+        objectType: "consulting_engagement",
+        objectId: signal.id,
+        name: signal.name,
+        status: `${signal.healthScore} health`,
+        due: formatDate(signal.renewalDate),
+        owner: signal.owner,
+        action: "launch_recovery_playbook",
+      })),
+    },
+    {
       id: "renewal-collections",
       label: "Renewal upcoming + collections issues",
       rows: engagements
@@ -1350,6 +1477,10 @@ const App = () => {
         })),
     },
   ];
+
+  const slaBreachCount = actionQueues.find((queue) => queue.id === "at-risk-milestones")?.rows.length || 0;
+  const criticalBlockerCount = actionQueues.find((queue) => queue.id === "high-severity-risks")?.rows.length || 0;
+  const recoveryQueueCount = actionQueues.find((queue) => queue.id === "critical-engagements")?.rows.length || 0;
 
   return (
     <div className="app-shell">
@@ -1796,30 +1927,141 @@ const App = () => {
                   )}
                 />
               </div>
+              <div className="card-grid">
+                {engagementSignals.map((signal) => (
+                  <Card key={signal.id} className="object-card">
+                    <header>
+                      <strong>{signal.name}</strong>
+                      <Badge className={signal.healthStatus.className}>{signal.healthStatus.label}</Badge>
+                    </header>
+                    <div className="summary-grid compact">
+                      <div className="summary-tile">
+                        <span className="label">Owner</span>
+                        <strong>{signal.owner || "—"}</strong>
+                      </div>
+                      <div className="summary-tile">
+                        <span className="label">Renewal</span>
+                        <strong>{formatDate(signal.renewalDate)}</strong>
+                      </div>
+                      <div className="summary-tile">
+                        <span className="label">Open risks</span>
+                        <strong>{signal.openRisks.length}</strong>
+                        <span className="helper">{signal.highRisks.length} high severity</span>
+                      </div>
+                      <div className="summary-tile">
+                        <span className="label">Renewal forecast</span>
+                        <strong>{signal.renewalForecastScore}</strong>
+                        <span className="helper">Composite score</span>
+                      </div>
+                      <div className="summary-tile">
+                        <span className="label">Scope creep</span>
+                        <strong>{signal.activeScopeChanges.length ? "Active" : "Clear"}</strong>
+                        <span className="helper">
+                          {signal.activeScopeChanges.length
+                            ? `${signal.activeScopeChanges.length} change request${signal.activeScopeChanges.length > 1 ? "s" : ""}`
+                            : "No open changes"}
+                        </span>
+                      </div>
+                    </div>
+                    {signal.healthStatus.label === "Low" && actionMap.launch_recovery_playbook ? (
+                      <Button
+                        onClick={() =>
+                          setActionSheet({
+                            action: actionMap.launch_recovery_playbook,
+                            context: { engagement_id: signal.id },
+                          })
+                        }
+                      >
+                        Launch recovery playbook
+                      </Button>
+                    ) : null}
+                  </Card>
+                ))}
+              </div>
               <div className="visual-grid">
-                <ChartCard title="Health Composition" description="Milestones + confidence + risks + sentiment + invoices." />
-                <ChartCard title="Engagement Health Trend" />
+                <ChartCard
+                  title="Health Composition (Donut)"
+                  description="Milestones, sentiment, risks, and scope signals."
+                />
+                <ChartCard title="Engagement Health Trend" description="Weekly score trend line over the last 90 days." />
               </div>
               <div className="module-grid">
                 <div className="module-main">
                   <Card className="panel">
-                    <h3>Engagements</h3>
+                    <h3>Engagement health drivers</h3>
                     <DataTable
-                      columns={["Engagement", "Status", "Renewal", "Health", "Completion"]}
-                      rows={engagements.map((engagement) => ({
-                        key: engagement.engagement_id,
-                        Engagement: engagement.engagement_name,
-                        Status: engagement.status,
-                        Renewal: formatDate(engagement.renewal_date),
-                        Health: engagement.engagement_health_score,
-                        Completion: formatPercent(
-                          getDerived(state, "consulting_engagement", engagement.engagement_id, "completion_rate")?.value || 0
+                      columns={["Engagement", "Milestones", "Sponsor sentiment", "Open risks", "Scope creep"]}
+                      rows={engagementSignals.map((signal) => ({
+                        key: `${signal.id}-drivers`,
+                        Engagement: signal.name,
+                        Milestones: formatPercent(signal.milestoneOnTimeRate),
+                        "Sponsor sentiment": formatPercent(signal.sentimentScore),
+                        "Open risks": `${signal.openRisks.length} (${signal.highRisks.length} high)`,
+                        "Scope creep": signal.activeScopeChanges.length ? (
+                          <Badge className="border border-rose-200 bg-rose-100 text-rose-800">Active</Badge>
+                        ) : (
+                          <Badge variant="secondary">Clear</Badge>
                         ),
                         onClick: () =>
                           handleSelectObject({
                             page: "engagement-health",
                             objectType: "consulting_engagement",
-                            objectId: engagement.engagement_id,
+                            objectId: signal.id,
+                          }),
+                      }))}
+                    />
+                  </Card>
+                  <Card className="panel">
+                    <h3>Engagements</h3>
+                    <DataTable
+                      columns={[
+                        "Engagement",
+                        "Status",
+                        "Renewal",
+                        "Health",
+                        "Health status",
+                        "Renewal forecast",
+                        "Scope creep",
+                        "Completion",
+                        "Action",
+                      ]}
+                      rows={engagementSignals.map((signal) => ({
+                        key: signal.id,
+                        Engagement: signal.name,
+                        Status: signal.engagement.status,
+                        Renewal: formatDate(signal.renewalDate),
+                        Health: signal.healthScore,
+                        "Health status": (
+                          <Badge className={signal.healthStatus.className}>{signal.healthStatus.label}</Badge>
+                        ),
+                        "Renewal forecast": signal.renewalForecastScore,
+                        "Scope creep": signal.activeScopeChanges.length ? (
+                          <Badge className="border border-rose-200 bg-rose-100 text-rose-800">Active</Badge>
+                        ) : (
+                          <Badge variant="secondary">Clear</Badge>
+                        ),
+                        Completion: formatPercent(signal.completionRate),
+                        Action:
+                          signal.healthStatus.label === "Low" && actionMap.launch_recovery_playbook ? (
+                            <Button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setActionSheet({
+                                  action: actionMap.launch_recovery_playbook,
+                                  context: { engagement_id: signal.id },
+                                });
+                              }}
+                            >
+                              Launch recovery playbook
+                            </Button>
+                          ) : (
+                            "—"
+                          ),
+                        onClick: () =>
+                          handleSelectObject({
+                            page: "engagement-health",
+                            objectType: "consulting_engagement",
+                            objectId: signal.id,
                           }),
                       }))}
                     />
@@ -2263,8 +2505,9 @@ const App = () => {
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">
                 <KpiCard label="Total pending actions" value={state.action_log.length} />
-                <KpiCard label="SLA breaches" value={actionQueues[0].rows.length} />
-                <KpiCard label="Critical blockers" value={actionQueues[1].rows.length} />
+                <KpiCard label="SLA breaches" value={slaBreachCount} />
+                <KpiCard label="Critical blockers" value={criticalBlockerCount} />
+                <KpiCard label="Recovery playbooks" value={recoveryQueueCount} />
               </div>
               <div className="module-grid">
                 <div className="module-main">
