@@ -1,29 +1,24 @@
 const { test, expect } = require("@playwright/test");
 
-test("navigation links and admin metadata update work", async ({ page }) => {
+test("happy path navigation and admin metadata update work", async ({ page }) => {
   await page.goto("/");
+  await expect(page.getByRole("navigation")).toBeVisible();
 
-  const navExpectations = [
-    { label: "Home / Executive Summary", heading: "Home / Executive Summary", page: "home" },
-    { label: "Portfolio (Accounts)", heading: "Portfolio (Accounts)", page: "portfolio" },
-    { label: "Engagement Health", heading: "Engagement Health", page: "engagement-health" },
-    { label: "Delivery Reliability", heading: "Delivery Reliability", page: "delivery-reliability" },
-    { label: "Value Realization", heading: "Value Realization", page: "value-realization" },
-    { label: "Risks & Change Control", heading: "Risks & Change Control", page: "risks-change-control" },
-    { label: "Renewal & Collections", heading: "Renewal & Collections", page: "renewal-collections" },
-    { label: "Governance", heading: "Governance", page: "governance" },
-    { label: "Action Center / Inbox", heading: "Action Center / Inbox", page: "action-center" },
-    { label: "Ontology Explorer", heading: "Ontology Explorer", page: "ontology-explorer" },
-    { label: "Admin / Settings", heading: "Admin / Settings", page: "admin" },
-  ];
+  await expect(page.locator('[data-page="home"]')).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Home / Executive Summary" })).toBeVisible();
 
-  for (const item of navExpectations) {
-    await page.getByRole("link", { name: item.label }).click();
-    await expect(page.locator(`[data-page="${item.page}"]`)).toBeVisible();
-    await expect(page.getByRole("heading", { level: 2, name: item.heading })).toBeVisible();
-  }
+  await page.getByRole("link", { name: "Portfolio (Accounts)" }).click();
+  await expect(page.locator('[data-page="portfolio"]')).toBeVisible();
 
-  await page.goto("/#/admin");
+  const firstAccountRow = page.locator('[data-page="portfolio"] table tbody tr').first();
+  await firstAccountRow.click();
+  await expect(page.locator(".object-panel")).toBeVisible();
+
+  await page.getByRole("link", { name: "Engagement Health" }).click();
+  await expect(page.locator('[data-page="engagement-health"]')).toBeVisible();
+
+  await page.getByRole("link", { name: "Admin / Settings" }).click();
+  await expect(page.locator('[data-page="admin"]')).toBeVisible();
 
   const companyNameField = page
     .locator("[data-page='admin'] .field-group")

@@ -30,13 +30,18 @@ npm run preview
 Vercel will auto-detect the Vite configuration (no custom server required).
 
 ## Tests
-Install dependencies and run unit + Playwright checks (Playwright will boot the Vite dev server for you):
+Cloud editors should run unit tests only. Playwright is intended for local/CI where browsers can launch.
 
 ```bash
 npm install
-npx playwright install
-npm run test:unit
 npm test
+```
+
+Local/CI E2E (Playwright boots the Vite dev server for you):
+
+```bash
+npx playwright install
+npm run test:e2e
 ```
 
 ## Project structure

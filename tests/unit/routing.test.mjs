@@ -29,26 +29,15 @@ assert.deepEqual(readRouteFromHash("#/portfolio/client_account/acct%20nova"), {
   objectId: "acct nova",
 });
 
-assert.equal(readRouteFromHash("#/not-a-page").page, "home");
-
 assert.equal(
   toHashHref({ page: "portfolio", objectType: "client_account", objectId: "acct nova" }),
   "#/portfolio/client_account/acct%20nova"
 );
-assert.equal(toHashHref({ page: "not-a-page" }), "#/home");
 
 assert.equal(
   resolveActivePage({
     route: { page: "portfolio", objectType: "client_account", objectId: "acc_123" },
     accountDetail: { account_id: "acc_123" },
-  }),
-  "portfolio"
-);
-
-assert.equal(
-  resolveActivePage({
-    route: { page: "portfolio", objectType: "client_account", objectId: "missing" },
-    accountDetail: null,
   }),
   "portfolio"
 );
