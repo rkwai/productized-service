@@ -11,7 +11,10 @@ export const seedInstances = {
       health_score: 78,
       renewal_risk_score: 34,
       total_contract_value_to_date: 2400000,
-      estimated_ltv: 8500000
+      estimated_ltv: 8500000,
+      customer_acquisition_cost: 450000,
+      avg_monthly_revenue: 180000,
+      gross_margin_pct: 62
     },
     {
       account_id: "acct_orbit",
@@ -24,7 +27,10 @@ export const seedInstances = {
       health_score: 62,
       renewal_risk_score: 48,
       total_contract_value_to_date: 950000,
-      estimated_ltv: 4200000
+      estimated_ltv: 4200000,
+      customer_acquisition_cost: 320000,
+      avg_monthly_revenue: 95000,
+      gross_margin_pct: 48
     }
   ],
   stakeholder: [

@@ -92,6 +92,9 @@ const PORTFOLIO_COLUMNS = [
   "Missing data",
   "Total value",
   "Estimated LTV",
+  "CAC",
+  "LTV:CAC",
+  "CAC payback",
   "LTV at risk",
 ];
 const PORTFOLIO_VIEW_PRESETS = [
@@ -1427,6 +1430,25 @@ const App = () => {
     const ltvAtRisk =
       getDerived(state, "client_account", account.account_id, "ltv_at_risk")?.value ??
       0;
+    const ltvValue = Number(account.estimated_ltv || 0);
+    const cacValue = Number(account.customer_acquisition_cost || 0);
+    const avgMonthlyRevenue = Number(account.avg_monthly_revenue || 0);
+    const grossMarginRaw = Number(account.gross_margin_pct || 0);
+    const grossMarginRate = grossMarginRaw > 1 ? grossMarginRaw / 100 : grossMarginRaw;
+    const derivedLtvCac = getDerived(state, "client_account", account.account_id, "ltv_cac_ratio")?.value;
+    const derivedGrossProfit = getDerived(state, "client_account", account.account_id, "gross_profit")?.value;
+    const derivedPayback = getDerived(state, "client_account", account.account_id, "cac_payback_months")?.value;
+    const ltvCacRatio =
+      derivedLtvCac ??
+      (cacValue > 0 && ltvValue > 0 ? Number((ltvValue / cacValue).toFixed(2)) : null);
+    const grossProfit =
+      derivedGrossProfit ??
+      (ltvValue && grossMarginRate ? Math.round(ltvValue * grossMarginRate) : 0);
+    const paybackMonths =
+      derivedPayback ??
+      (cacValue > 0 && avgMonthlyRevenue * grossMarginRate > 0
+        ? Number((cacValue / (avgMonthlyRevenue * grossMarginRate)).toFixed(1))
+        : null);
     const segmentValue =
       getDerived(state, "client_account", account.account_id, "segment_tag")?.value ??
       account.segment_tag;
@@ -1439,6 +1461,13 @@ const App = () => {
       freshnessDays,
       missingFields: Array.isArray(missingFields) ? missingFields : [],
       ltvAtRisk,
+      ltvValue,
+      cacValue,
+      ltvCacRatio,
+      grossProfit,
+      paybackMonths,
+      avgMonthlyRevenue,
+      grossMarginRate,
       segmentValue,
     };
   });
@@ -1508,6 +1537,16 @@ const App = () => {
     : 0;
 
   const totalLtvAtRisk = accountSignals.reduce((sum, item) => sum + (Number(item.ltvAtRisk) || 0), 0);
+  const totalLtv = accountSignals.reduce((sum, item) => sum + (Number(item.ltvValue) || 0), 0);
+  const totalCac = accountSignals.reduce((sum, item) => sum + (Number(item.cacValue) || 0), 0);
+  const portfolioLtvCacRatio =
+    totalCac > 0 ? Number((totalLtv / totalCac).toFixed(2)) : null;
+  const paybackValues = accountSignals
+    .map((item) => item.paybackMonths)
+    .filter((value) => Number.isFinite(value));
+  const avgCacPaybackMonths = paybackValues.length
+    ? Number((paybackValues.reduce((sum, value) => sum + value, 0) / paybackValues.length).toFixed(1))
+    : null;
 
   const freshAccounts = accountSignals.filter((item) => Number.isFinite(item.freshnessDays) && item.freshnessDays <= 30)
     .length;
@@ -1544,6 +1583,31 @@ const App = () => {
 
   const regionBreakdown = buildBreakdown(accountSignals, (item) => item.account.region);
 
+  const segmentProfitability = Object.entries(groupBy(accountSignals, (item) => item.segmentValue || "Unassigned"))
+    .map(([segment, items]) => {
+      const totalSegmentLtv = items.reduce((sum, item) => sum + (Number(item.ltvValue) || 0), 0);
+      const totalSegmentCac = items.reduce((sum, item) => sum + (Number(item.cacValue) || 0), 0);
+      const totalSegmentProfit = items.reduce((sum, item) => sum + (Number(item.grossProfit) || 0), 0);
+      const avgSegmentPayback = (() => {
+        const values = items.map((item) => item.paybackMonths).filter((value) => Number.isFinite(value));
+        return values.length
+          ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1))
+          : null;
+      })();
+      const ltvCacRatio =
+        totalSegmentCac > 0 ? Number((totalSegmentLtv / totalSegmentCac).toFixed(2)) : null;
+      return {
+        segment,
+        count: items.length,
+        totalProfit: totalSegmentProfit,
+        ltvCacRatio,
+        avgPayback: avgSegmentPayback,
+      };
+    })
+    .sort((a, b) => b.totalProfit - a.totalProfit);
+
+  const mostProfitableSegment = segmentProfitability[0] || null;
+
   const segmentCohortRows = segmentBreakdown.map((segment) => ({
     key: `segment-${segment.key}`,
     Cohort: segment.key,
@@ -1578,6 +1642,15 @@ const App = () => {
         <span>{formatDelta(region.riskDelta)}</span>
       </div>
     ),
+  }));
+
+  const segmentProfitRows = segmentProfitability.map((segment) => ({
+    key: `segment-profit-${segment.segment}`,
+    Segment: segment.segment,
+    Accounts: segment.count,
+    "Total gross profit": formatNumber(segment.totalProfit),
+    "LTV:CAC": segment.ltvCacRatio ? `${segment.ltvCacRatio}x` : "—",
+    "CAC payback": segment.avgPayback ? `${segment.avgPayback} mo` : "—",
   }));
 
   const onTrackOutcomes = (state.instances.outcome || []).filter(
@@ -1940,31 +2013,45 @@ const App = () => {
 
   const portfolioTableRows = portfolioGroupedRows.map((entry) => {
     if (entry.type === "group") {
-      return {
-        key: `group-${entry.key}`,
-        className: "table-group-row",
-        Select: "",
-        Account: (
-          <div className="group-label">
-            <strong>{portfolioGroupBy === "region" ? "Region" : "Segment"}:</strong> {entry.key}
-            <span>{entry.count} accounts</span>
-          </div>
-        ),
-        Industry: "",
-        Region: "",
-        Segment: "",
-        Health: "",
-        "Renewal risk": "",
-        "Churn risk": "",
-        "Data freshness": "",
-        "Missing data": "",
-        "Total value": "",
-        "Estimated LTV": "",
-        "LTV at risk": "",
-      };
-    }
-    const { account, healthValue, riskValue, churnValue, freshnessDays, missingFields, ltvAtRisk, segmentValue } =
-      entry.item;
+        return {
+          key: `group-${entry.key}`,
+          className: "table-group-row",
+          Select: "",
+          Account: (
+            <div className="group-label">
+              <strong>{portfolioGroupBy === "region" ? "Region" : "Segment"}:</strong> {entry.key}
+              <span>{entry.count} accounts</span>
+            </div>
+          ),
+          Industry: "",
+          Region: "",
+          Segment: "",
+          Health: "",
+          "Renewal risk": "",
+          "Churn risk": "",
+          "Data freshness": "",
+          "Missing data": "",
+          "Total value": "",
+          "Estimated LTV": "",
+          CAC: "",
+          "LTV:CAC": "",
+          "CAC payback": "",
+          "LTV at risk": "",
+        };
+      }
+    const {
+      account,
+      healthValue,
+      riskValue,
+      churnValue,
+      freshnessDays,
+      missingFields,
+      ltvAtRisk,
+      segmentValue,
+      cacValue,
+      ltvCacRatio,
+      paybackMonths,
+    } = entry.item;
     const isSelected = selectedPortfolioAccounts.includes(account.account_id);
     return {
       key: account.account_id,
@@ -1996,6 +2083,9 @@ const App = () => {
       ),
       "Total value": formatNumber(account.total_contract_value_to_date),
       "Estimated LTV": formatNumber(account.estimated_ltv),
+      CAC: formatNumber(cacValue),
+      "LTV:CAC": ltvCacRatio ? `${ltvCacRatio}x` : "—",
+      "CAC payback": paybackMonths ? `${paybackMonths} mo` : "—",
       "LTV at risk": formatNumber(ltvAtRisk),
       onClick: () =>
         handleSelectObject({
@@ -2252,6 +2342,31 @@ const App = () => {
                 </div>
                 <div className="kpi-group">
                   <div className="kpi-group-header">
+                    <h3>Marketing ROI</h3>
+                    <p>LTV:CAC efficiency and profit concentration by segment.</p>
+                  </div>
+                  <div className="kpi-row">
+                    <KpiCard
+                      label="Portfolio LTV:CAC"
+                      value={portfolioLtvCacRatio ? `${portfolioLtvCacRatio}x` : "—"}
+                    />
+                    <KpiCard
+                      label="Avg CAC Payback"
+                      value={avgCacPaybackMonths ? `${avgCacPaybackMonths} mo` : "—"}
+                    />
+                    <KpiCard
+                      label="Most Profitable Segment"
+                      value={mostProfitableSegment?.segment ?? "—"}
+                      helper={
+                        mostProfitableSegment
+                          ? `$${formatNumber(mostProfitableSegment.totalProfit)} gross profit`
+                          : "Add CAC + margin data"
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="kpi-group">
+                  <div className="kpi-group-header">
                     <h3>Delivery & finance</h3>
                     <p>Commitments and collections requiring escalation.</p>
                   </div>
@@ -2455,6 +2570,14 @@ const App = () => {
                     <DataTable columns={["Cohort", "Accounts", "Avg health", "Avg risk"]} rows={regionCohortRows} />
                   </div>
                 </div>
+              </Card>
+              <Card className="panel">
+                <h3>Profitability by segment</h3>
+                <p className="help-text">Gross profit and LTV:CAC highlight where to concentrate marketing spend.</p>
+                <DataTable
+                  columns={["Segment", "Accounts", "Total gross profit", "LTV:CAC", "CAC payback"]}
+                  rows={segmentProfitRows}
+                />
               </Card>
               <div className="visual-grid">
                 <ChartCard

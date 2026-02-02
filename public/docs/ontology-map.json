@@ -22,8 +22,16 @@
           "health_score",
           "renewal_risk_score",
           "total_contract_value_to_date",
-          "estimated_ltv"
-        ]
+          "estimated_ltv",
+          "customer_acquisition_cost",
+          "avg_monthly_revenue",
+          "gross_margin_pct"
+        ],
+        "field_overrides": {
+          "customer_acquisition_cost": "number",
+          "avg_monthly_revenue": "number",
+          "gross_margin_pct": "number"
+        }
       },
       {
         "id": "stakeholder",
@@ -507,11 +515,12 @@
   "data_integration_mapping": {
     "sources": [
       "CRM (Salesforce/HubSpot) -> client_account, stakeholder, consulting_engagement (commercial metadata)",
+      "Marketing platforms (Google Ads, Meta, HubSpot) -> client_account.customer_acquisition_cost",
       "Document repositories (Google Drive/SharePoint/Confluence) -> deliverable.evidence_link, statement_of_work, exec readouts",
       "Project/Governance tools (Asana/Jira/Smartsheet) -> workstream, milestone, risk_issue, change_request",
       "Comms/Calendar (Google Calendar/Outlook, Teams/Slack) -> meeting metadata + governance cadence signals",
       "Survey/Feedback (Qualtrics/Delighted/Forms) -> stakeholder sentiment, deliverable quality feedback",
-      "Billing/Finance (Stripe/NetSuite/QuickBooks) -> invoice, payment",
+      "Billing/Finance (Stripe/NetSuite/QuickBooks) -> invoice, payment, gross_margin_pct, avg_monthly_revenue",
       "Client KPI sources (client BI dashboards, exports, agreed system-of-record) -> kpi_snapshot"
     ],
     "pipeline_tool": "Pipeline Builder for automated semantic hydration with incremental syncs (milestones, deliverables, risks, KPI snapshots) and document metadata extraction"

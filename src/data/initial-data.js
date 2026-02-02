@@ -25,7 +25,15 @@ export const initialData = {
           "renewal_risk_score",
           "total_contract_value_to_date",
           "estimated_ltv",
+          "customer_acquisition_cost",
+          "avg_monthly_revenue",
+          "gross_margin_pct",
         ],
+        field_overrides: {
+          customer_acquisition_cost: "number",
+          avg_monthly_revenue: "number",
+          gross_margin_pct: "number",
+        },
       },
       {
         id: "stakeholder",

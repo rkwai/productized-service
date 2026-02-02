@@ -1,6 +1,6 @@
 # Ontology Decision Cockpit UI
 
-A configuration-driven, dependency-free decision cockpit for viewing and editing a Palantir-style ontology plus live operational data. The UI is built for business stakeholders to steer renewal readiness, delivery reliability, and measurable value realization.
+A configuration-driven, dependency-free decision cockpit for viewing and editing a Palantir-style ontology plus live operational data. The UI is built for business stakeholders to steer renewal readiness, delivery reliability, measurable value realization, and marketing ROI (LTV:CAC + profitability by segment).
 
 ## Why this exists
 This prototype helps teams translate ontology definitions and field data into an operational cockpit that:
@@ -8,6 +8,7 @@ This prototype helps teams translate ontology definitions and field data into an
 - Connects delivery reliability to outcomes and KPIs.
 - Turns insights into actions with logged workflows.
 - Keeps ontology configuration editable and versioned.
+- Makes LTV:CAC and segment profitability visible for spend allocation decisions.
 
 ## Quick start
 This is a React + Vite app with Tailwind + shadcn/ui components.
@@ -44,6 +45,12 @@ npx playwright install
 npm run test:e2e
 ```
 
+Run everything (unit + E2E):
+
+```bash
+npm run test:all
+```
+
 ## Project structure
 - `index.html` - Vite entry document.
 - `src/App.jsx` - Main React layout, routes, and UI rendering.
@@ -63,7 +70,7 @@ npm run test:e2e
 - The **Current JSON** panel reflects live edits and can be downloaded.
 
 ## Business value focus
-The cockpit keeps value signals visible (health, risk, outcome progress) with explainability panels to support renewal and expansion conversations.
+The cockpit keeps value signals visible (health, risk, outcome progress) with explainability panels to support renewal, expansion, and marketing ROI decisions. Executives can track LTV:CAC and identify the most profitable segment to guide spend allocation.
 
 ## Roadmap
 See `docs/PLAN.md` for the full plan and next steps.

@@ -35,6 +35,15 @@ The cockpit is a React + Vite SPA that models a client ontology and the operatio
 - Outcome progress
 - Account health and renewal risk
 - Account segmentation
+- Revenue efficiency (LTV:CAC, CAC payback, gross profit)
+
+The revenue efficiency layer combines:
+- `estimated_ltv`
+- `customer_acquisition_cost`
+- `avg_monthly_revenue`
+- `gross_margin_pct`
+
+to derive profit concentration by segment and executive-ready ROI signals.
 
 Each derived value stores `value`, `computed_at`, and `explanation_json`.
 

@@ -368,6 +368,9 @@ export const computeDerived = (state) => {
       "segment_tag",
       "estimated_ltv",
       "total_contract_value_to_date",
+      "customer_acquisition_cost",
+      "avg_monthly_revenue",
+      "gross_margin_pct",
     ];
     const missingFields = requiredFields.filter((field) => !account[field]);
 
@@ -433,6 +436,54 @@ export const computeDerived = (state) => {
       explanation_json: {
         estimated_ltv: valueScore,
         renewal_risk_score: renewalRisk,
+      },
+    });
+
+    const ltvValue = Number(account.estimated_ltv || 0);
+    const cacValue = Number(account.customer_acquisition_cost || 0);
+    const grossMarginRaw = Number(account.gross_margin_pct || 0);
+    const grossMarginRate = grossMarginRaw > 1 ? grossMarginRaw / 100 : grossMarginRaw;
+    const avgMonthlyRevenue = Number(account.avg_monthly_revenue || 0);
+    const grossProfit = ltvValue && grossMarginRate ? Math.round(ltvValue * grossMarginRate) : 0;
+    const ltvCacRatio = cacValue > 0 && ltvValue > 0 ? Number((ltvValue / cacValue).toFixed(2)) : null;
+    const monthlyGross = avgMonthlyRevenue * grossMarginRate;
+    const paybackMonths =
+      cacValue > 0 && monthlyGross > 0 ? Number((cacValue / monthlyGross).toFixed(1)) : null;
+
+    setDerived(state, {
+      object_type: "client_account",
+      object_id: account.account_id,
+      field: "ltv_cac_ratio",
+      value: ltvCacRatio,
+      computed_at: now,
+      explanation_json: {
+        estimated_ltv: ltvValue,
+        customer_acquisition_cost: cacValue,
+      },
+    });
+
+    setDerived(state, {
+      object_type: "client_account",
+      object_id: account.account_id,
+      field: "gross_profit",
+      value: grossProfit,
+      computed_at: now,
+      explanation_json: {
+        estimated_ltv: ltvValue,
+        gross_margin_pct: grossMarginRaw,
+      },
+    });
+
+    setDerived(state, {
+      object_type: "client_account",
+      object_id: account.account_id,
+      field: "cac_payback_months",
+      value: paybackMonths,
+      computed_at: now,
+      explanation_json: {
+        customer_acquisition_cost: cacValue,
+        avg_monthly_revenue: avgMonthlyRevenue,
+        gross_margin_pct: grossMarginRaw,
       },
     });
   });
