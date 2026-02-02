@@ -59,6 +59,11 @@ const formatDelta = (value) => {
   const rounded = Math.round(value);
   return `${rounded > 0 ? "+" : ""}${rounded}`;
 };
+const formatSignedPercent = (value) => {
+  if (!Number.isFinite(value)) return "—";
+  const rounded = Math.round(value);
+  return `${rounded > 0 ? "+" : ""}${rounded}%`;
+};
 const formatDays = (value) => (Number.isFinite(value) ? `${value}d` : "—");
 const getHealthTone = (value) => {
   if (!Number.isFinite(value)) return "status-pill--neutral";
@@ -71,6 +76,12 @@ const getRiskTone = (value) => {
   if (value >= 70) return "status-pill--bad";
   if (value >= 45) return "status-pill--warn";
   return "status-pill--good";
+};
+const getSpendTone = (value) => {
+  if (!Number.isFinite(value)) return "status-pill--neutral";
+  if (value >= 5) return "status-pill--good";
+  if (value <= -5) return "status-pill--bad";
+  return "status-pill--warn";
 };
 const getFreshnessTone = (value) => {
   if (!Number.isFinite(value)) return "status-pill--neutral";
@@ -1583,6 +1594,9 @@ const App = () => {
 
   const regionBreakdown = buildBreakdown(accountSignals, (item) => item.account.region);
 
+  const LTV_CAC_TARGET = 3;
+  const SPEND_DELTA_THRESHOLD = 5;
+
   const segmentProfitability = Object.entries(groupBy(accountSignals, (item) => item.segmentValue || "Unassigned"))
     .map(([segment, items]) => {
       const totalSegmentLtv = items.reduce((sum, item) => sum + (Number(item.ltvValue) || 0), 0);
@@ -1600,6 +1614,7 @@ const App = () => {
         segment,
         count: items.length,
         totalProfit: totalSegmentProfit,
+        totalCac: totalSegmentCac,
         ltvCacRatio,
         avgPayback: avgSegmentPayback,
       };
@@ -1609,12 +1624,38 @@ const App = () => {
   const totalGrossProfit = segmentProfitability.reduce((sum, segment) => sum + segment.totalProfit, 0);
   const segmentProfitabilityWithShare = segmentProfitability.map((segment) => ({
     ...segment,
-    profitShare: totalGrossProfit
-      ? Math.round((segment.totalProfit / totalGrossProfit) * 100)
-      : 0,
+    profitShare: totalGrossProfit ? Math.round((segment.totalProfit / totalGrossProfit) * 100) : 0,
   }));
 
-  const mostProfitableSegment = segmentProfitabilityWithShare[0] || null;
+  const segmentProfitabilityAligned = segmentProfitabilityWithShare.map((segment) => {
+    const cacShare = totalCac ? Math.round((segment.totalCac / totalCac) * 100) : 0;
+    const spendDelta = segment.profitShare - cacShare;
+    const hasRoi = Number.isFinite(segment.ltvCacRatio);
+    const roiQualified = hasRoi && segment.ltvCacRatio >= LTV_CAC_TARGET;
+    const spendAction = !hasRoi
+      ? "Add CAC data"
+      : !roiQualified
+        ? "Fix unit economics"
+        : spendDelta >= SPEND_DELTA_THRESHOLD
+          ? "Increase spend"
+          : spendDelta <= -SPEND_DELTA_THRESHOLD
+            ? "Reduce spend"
+            : "Hold spend";
+    return {
+      ...segment,
+      cacShare,
+      spendDelta,
+      spendAction,
+      roiQualified,
+    };
+  });
+
+  const mostProfitableSegment = segmentProfitabilityAligned[0] || null;
+  const bestRoiSegment =
+    segmentProfitabilityAligned
+      .filter((segment) => Number.isFinite(segment.ltvCacRatio))
+      .sort((a, b) => (b.ltvCacRatio || 0) - (a.ltvCacRatio || 0))[0] || null;
+  const spendAlignmentRows = segmentProfitabilityAligned.slice(0, 4);
   const roiCoveragePct = accountSignals.length
     ? Math.round(
         (accountSignals.filter(
@@ -1624,15 +1665,45 @@ const App = () => {
           100
       )
     : 0;
+  const roiTargetSuffix =
+    mostProfitableSegment && Number.isFinite(mostProfitableSegment.ltvCacRatio)
+      ? mostProfitableSegment.ltvCacRatio >= LTV_CAC_TARGET
+        ? `(above ${LTV_CAC_TARGET}x target)`
+        : `(below ${LTV_CAC_TARGET}x target)`
+      : "";
   const roiRecommendation = mostProfitableSegment
     ? {
         title: `Shift spend toward ${mostProfitableSegment.segment}`,
-        detail: `${mostProfitableSegment.segment} holds ${mostProfitableSegment.profitShare}% of gross profit with an LTV:CAC of ${mostProfitableSegment.ltvCacRatio ?? "—"}x.`,
+        detail: `${mostProfitableSegment.segment} holds ${mostProfitableSegment.profitShare}% of gross profit with an LTV:CAC of ${mostProfitableSegment.ltvCacRatio ?? "—"}x${roiTargetSuffix ? ` ${roiTargetSuffix}` : ""}.`,
       }
     : {
         title: "Add CAC + margin data",
         detail: "Complete revenue inputs to unlock allocation recommendations.",
       };
+
+  const renderSegmentLabel = (segment) => {
+    const badges = [];
+    if (segment.segment === mostProfitableSegment?.segment) {
+      badges.push(
+        <Badge key={`${segment.segment}-profit`} variant="secondary">
+          Profit leader
+        </Badge>
+      );
+    }
+    if (segment.segment === bestRoiSegment?.segment) {
+      badges.push(
+        <Badge key={`${segment.segment}-roi`} variant="subtle">
+          ROI leader
+        </Badge>
+      );
+    }
+    return (
+      <div className="segment-label">
+        <span>{segment.segment}</span>
+        {badges.length ? <div className="segment-badges">{badges}</div> : null}
+      </div>
+    );
+  };
 
   const segmentCohortRows = segmentBreakdown.map((segment) => ({
     key: `segment-${segment.key}`,
@@ -1670,14 +1741,32 @@ const App = () => {
     ),
   }));
 
-  const segmentProfitRows = segmentProfitabilityWithShare.map((segment) => ({
+  const segmentProfitRows = segmentProfitabilityAligned.map((segment) => ({
     key: `segment-profit-${segment.segment}`,
-    Segment: segment.segment,
+    Segment: renderSegmentLabel(segment),
     Accounts: segment.count,
     "Total gross profit": formatNumber(segment.totalProfit),
     "Profit share": `${segment.profitShare}%`,
+    "CAC share": `${segment.cacShare}%`,
+    "Spend delta": (
+      <StatusPill label={formatSignedPercent(segment.spendDelta)} tone={getSpendTone(segment.spendDelta)} />
+    ),
     "LTV:CAC": segment.ltvCacRatio ? `${segment.ltvCacRatio}x` : "—",
     "CAC payback": segment.avgPayback ? `${segment.avgPayback} mo` : "—",
+    Action: segment.spendAction,
+  }));
+
+  const segmentSpendRows = spendAlignmentRows.map((segment) => ({
+    key: `segment-spend-${segment.segment}`,
+    Segment: renderSegmentLabel(segment),
+    "Gross profit": formatNumber(segment.totalProfit),
+    "Profit share": `${segment.profitShare}%`,
+    "CAC share": `${segment.cacShare}%`,
+    "Spend delta": (
+      <StatusPill label={formatSignedPercent(segment.spendDelta)} tone={getSpendTone(segment.spendDelta)} />
+    ),
+    "LTV:CAC": segment.ltvCacRatio ? `${segment.ltvCacRatio}x` : "—",
+    Action: segment.spendAction,
   }));
 
   const onTrackOutcomes = (state.instances.outcome || []).filter(
@@ -2334,33 +2423,39 @@ const App = () => {
               <div className="kpi-groups">
                 <div className="kpi-group">
                   <div className="kpi-group-header">
-                    <h3>Portfolio health</h3>
-                    <p>Weighted score across health, risk, milestones, and outcomes.</p>
+                    <h3>Executive priorities</h3>
+                    <p>Revenue efficiency and exposure that drive board-level decisions.</p>
                   </div>
-                  <div className="kpi-row">
+                  <div className="kpi-row executive">
                     <KpiCard
-                      label="Portfolio Health Score"
-                      value={`${portfolioHealthScore}%`}
-                      helper={<TrendIndicator value={portfolioHealthTrend} />}
+                      label="Portfolio LTV:CAC"
+                      value={portfolioLtvCacRatio ? `${portfolioLtvCacRatio}x` : "—"}
+                      helper="Unit economics"
                     />
-                    <KpiCard label="# Active Accounts" value={filteredAccounts.length} />
-                    <KpiCard label="Avg Account Health" value={avgHealth} />
-                    <KpiCard label="Outcomes On Track" value={onTrackOutcomes} />
-                  </div>
-                </div>
-                <div className="kpi-group">
-                  <div className="kpi-group-header">
-                    <h3>Renewal risk</h3>
-                    <p>Exposure to renewal slippage across top accounts.</p>
-                  </div>
-                  <div className="kpi-row">
-                    <KpiCard label="Avg Renewal Risk" value={avgRisk} />
+                    <KpiCard
+                      label="Best LTV:CAC Segment"
+                      value={bestRoiSegment?.segment ?? "—"}
+                      helper={bestRoiSegment ? `${bestRoiSegment.ltvCacRatio}x LTV:CAC` : "Add CAC + margin data"}
+                    />
+                    <KpiCard
+                      label="Profit Share Leader"
+                      value={mostProfitableSegment?.segment ?? "—"}
+                      helper={
+                        mostProfitableSegment
+                          ? `${mostProfitableSegment.profitShare}% of gross profit`
+                          : "Add CAC + margin data"
+                      }
+                    />
+                    <KpiCard
+                      label="LTV at Risk"
+                      value={`$${formatNumber(totalLtvAtRisk)}`}
+                      helper="Churn + renewal risk"
+                    />
                     <KpiCard
                       label="Pipeline Risk Exposure"
                       value={`$${formatNumber(pipelineRiskExposure)}`}
-                      helper="Top 5 accounts above risk threshold."
+                      helper="Top 5 accounts above risk threshold"
                     />
-                    <KpiCard label="# Accounts Above Risk Threshold" value={accountsAboveRiskThreshold} />
                   </div>
                 </div>
                 <div className="kpi-group">
@@ -2398,6 +2493,58 @@ const App = () => {
                       <strong>{roiRecommendation.title}</strong>
                     </div>
                     <p>{roiRecommendation.detail}</p>
+                  </div>
+                </div>
+                <Card className="panel">
+                  <div className="panel-header">
+                    <div>
+                      <h3>Segment spend alignment</h3>
+                      <p>Compare profit share to CAC share to see if spend is aligned to value.</p>
+                    </div>
+                    <Badge variant="secondary">Top segments</Badge>
+                  </div>
+                  <DataTable
+                    columns={[
+                      "Segment",
+                      "Gross profit",
+                      "Profit share",
+                      "CAC share",
+                      "Spend delta",
+                      "LTV:CAC",
+                      "Action",
+                    ]}
+                    rows={segmentSpendRows}
+                  />
+                </Card>
+                <div className="kpi-group">
+                  <div className="kpi-group-header">
+                    <h3>Portfolio health</h3>
+                    <p>Weighted score across health, risk, milestones, and outcomes.</p>
+                  </div>
+                  <div className="kpi-row">
+                    <KpiCard
+                      label="Portfolio Health Score"
+                      value={`${portfolioHealthScore}%`}
+                      helper={<TrendIndicator value={portfolioHealthTrend} />}
+                    />
+                    <KpiCard label="# Active Accounts" value={filteredAccounts.length} />
+                    <KpiCard label="Avg Account Health" value={avgHealth} />
+                    <KpiCard label="Outcomes On Track" value={onTrackOutcomes} />
+                  </div>
+                </div>
+                <div className="kpi-group">
+                  <div className="kpi-group-header">
+                    <h3>Renewal risk</h3>
+                    <p>Exposure to renewal slippage across top accounts.</p>
+                  </div>
+                  <div className="kpi-row">
+                    <KpiCard label="Avg Renewal Risk" value={avgRisk} />
+                    <KpiCard
+                      label="Pipeline Risk Exposure"
+                      value={`$${formatNumber(pipelineRiskExposure)}`}
+                      helper="Top 5 accounts above risk threshold."
+                    />
+                    <KpiCard label="# Accounts Above Risk Threshold" value={accountsAboveRiskThreshold} />
                   </div>
                 </div>
                 <div className="kpi-group">
@@ -2610,7 +2757,17 @@ const App = () => {
                 <h3>Profitability by segment</h3>
                 <p className="help-text">Gross profit and LTV:CAC highlight where to concentrate marketing spend.</p>
                 <DataTable
-                  columns={["Segment", "Accounts", "Total gross profit", "Profit share", "LTV:CAC", "CAC payback"]}
+                  columns={[
+                    "Segment",
+                    "Accounts",
+                    "Total gross profit",
+                    "Profit share",
+                    "CAC share",
+                    "Spend delta",
+                    "LTV:CAC",
+                    "CAC payback",
+                    "Action",
+                  ]}
                   rows={segmentProfitRows}
                 />
               </Card>

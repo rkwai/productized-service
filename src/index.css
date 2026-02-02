@@ -323,6 +323,20 @@ body {
   gap: var(--space-2);
 }
 
+.kpi-row.executive .kpi-card {
+  background: hsl(var(--secondary));
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.kpi-row.executive .kpi-card strong {
+  font-size: 1.45rem;
+}
+
+.kpi-row.executive .kpi-card .label {
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+}
+
 .kpi-groups {
   display: grid;
   gap: var(--space-3);
@@ -1043,6 +1057,18 @@ tbody tr:hover {
 .group-label span {
   color: var(--muted-text);
   font-size: 0.8rem;
+}
+
+.segment-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.segment-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 
 .status-pill {
