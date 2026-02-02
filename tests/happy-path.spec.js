@@ -1,4 +1,4 @@
-const { test, expect } = require("@playwright/test");
+import { test, expect } from "@playwright/test";
 
 test("happy path navigation and admin metadata update work", async ({ page }) => {
   await page.goto("/");
@@ -7,6 +7,7 @@ test("happy path navigation and admin metadata update work", async ({ page }) =>
   await expect(page.locator('[data-page="home"]')).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Home / Executive Summary" })).toBeVisible();
   await expect(page.getByText("Portfolio LTV:CAC")).toBeVisible();
+  await expect(page.getByText("Spend recommendation")).toBeVisible();
 
   await page.getByRole("link", { name: "Portfolio (Accounts)" }).click();
   await expect(page.locator('[data-page="portfolio"]')).toBeVisible();

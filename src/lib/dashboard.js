@@ -1,6 +1,6 @@
-import { initialData } from "@/data/initial-data";
-import { seedInstances, seedLinks } from "@/data/seed-data";
-import { loadState, saveState } from "@/lib/storage";
+import { initialData } from "../data/initial-data.js";
+import { seedInstances, seedLinks } from "../data/seed-data.js";
+import { loadState, saveState } from "./storage.js";
 
 const DEFAULT_ROLE = "Operator";
 

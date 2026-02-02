@@ -51,6 +51,8 @@ Run everything (unit + E2E):
 npm run test:all
 ```
 
+CI runs `npm run test:all` after installing Playwright browsers (see `.github/workflows/ci.yml`).
+
 ## Project structure
 - `index.html` - Vite entry document.
 - `src/App.jsx` - Main React layout, routes, and UI rendering.
@@ -70,7 +72,7 @@ npm run test:all
 - The **Current JSON** panel reflects live edits and can be downloaded.
 
 ## Business value focus
-The cockpit keeps value signals visible (health, risk, outcome progress) with explainability panels to support renewal, expansion, and marketing ROI decisions. Executives can track LTV:CAC and identify the most profitable segment to guide spend allocation.
+The cockpit keeps value signals visible (health, risk, outcome progress) with explainability panels to support renewal, expansion, and marketing ROI decisions. Executives can track LTV:CAC, CAC payback, and the most profitable segment to guide spend allocation.
 
 ## Roadmap
 See `docs/PLAN.md` for the full plan and next steps.

@@ -27,6 +27,13 @@ The cockpit is a React + Vite SPA that models a client ontology and the operatio
 - Fields use type inference heuristics with optional overrides (`field_overrides`).
 - Explainability panels surface derived scores/flags with computation context.
 
+## Executive UX layer
+- Design system tokens live in `src/index.css` (spacing, typography, color).
+- Primary UI font: Geist with tabular numerics for KPI readability.
+- Whitespace is intentionally sparse: fewer, tighter gaps with larger emphasis inside priority cards.
+- Typography uses a single primary font with tabular numerics for KPI legibility.
+- A restrained neutral palette is paired with semantic accents for risk/ROI signals.
+
 ## Kinetic computation engine
 `src/lib/dashboard.js` calculates derived fields for:
 - Engagement health

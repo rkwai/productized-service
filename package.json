@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "React dashboard for ontology value tracking.",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

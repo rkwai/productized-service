@@ -17,7 +17,7 @@ npm run dev
 Use the role selector in the header to switch roles.
 
 ## Navigating the cockpit
-- **Home / Executive Summary**: Portfolio health, renewal risk, marketing efficiency, and attention accounts.
+- **Home / Executive Summary**: Portfolio health, renewal risk, marketing ROI (LTV:CAC + CAC payback), and attention accounts.
 - **Portfolio (Accounts)**: Account list with health, LTV:CAC, and profitability signals by segment.
 - **Engagement Health**: Delivery reliability, engagement health drivers, and renewal forecasts.
 - **Delivery Reliability**: Workstreams, milestones, and escalation readiness.
@@ -41,6 +41,14 @@ Executives can review marketing ROI and profit concentration directly in the Hom
 - **CAC payback months** is estimated from average monthly revenue and margin.
 
 Update CAC, margin, and monthly revenue fields in **Admin / Settings** to keep the model accurate.
+
+## Segment profitability
+Use **Profitability by segment** on the Portfolio page to:
+- Identify which segment generates the highest gross profit.
+- Compare LTV:CAC efficiency and payback speed side-by-side.
+- Inform where to re-allocate marketing spend.
+
+The **Spend recommendation** callout on Home summarizes the top segment to fund based on profit share and LTV:CAC.
 
 ## Explainability
 Each derived score includes a panel describing the contributing signals and the timestamp of computation.

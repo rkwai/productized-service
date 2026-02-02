@@ -25,8 +25,17 @@
 - [ ] Add timeline visualization for milestones and outcomes.
 - [ ] Add multi-tenant storage adapters (API + DB).
 
+## Phase 4: Executive Experience (Current)
+- [ ] Ship a luxury-but-dense executive layout with whitespace used sparingly and intentionally.
+- [ ] Add a Marketing ROI strip (Portfolio LTV:CAC, CAC payback, profit concentration, coverage).
+- [ ] Add segment profitability leaderboard with allocation recommendation.
+- [ ] Introduce a typography system (single primary font, numeric tabular alignment).
+- [ ] Define a restrained color system (neutral base + semantic accents) with consistent meaning.
+- [ ] Validate a happy-path E2E that covers the new executive ROI functionality.
+
 ## Success criteria
 - Every field is editable and reflected in the live JSON.
 - Users can quickly understand value signals and governance actions.
 - Derived scores include explainability payloads.
 - Action runs are logged with parameters and timestamps.
+- Executives can see LTV:CAC and identify the most profitable segment in under 15 seconds.

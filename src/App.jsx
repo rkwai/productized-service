@@ -1606,7 +1606,33 @@ const App = () => {
     })
     .sort((a, b) => b.totalProfit - a.totalProfit);
 
-  const mostProfitableSegment = segmentProfitability[0] || null;
+  const totalGrossProfit = segmentProfitability.reduce((sum, segment) => sum + segment.totalProfit, 0);
+  const segmentProfitabilityWithShare = segmentProfitability.map((segment) => ({
+    ...segment,
+    profitShare: totalGrossProfit
+      ? Math.round((segment.totalProfit / totalGrossProfit) * 100)
+      : 0,
+  }));
+
+  const mostProfitableSegment = segmentProfitabilityWithShare[0] || null;
+  const roiCoveragePct = accountSignals.length
+    ? Math.round(
+        (accountSignals.filter(
+          (item) => item.cacValue > 0 && item.avgMonthlyRevenue > 0 && item.grossMarginRate > 0
+        ).length /
+          accountSignals.length) *
+          100
+      )
+    : 0;
+  const roiRecommendation = mostProfitableSegment
+    ? {
+        title: `Shift spend toward ${mostProfitableSegment.segment}`,
+        detail: `${mostProfitableSegment.segment} holds ${mostProfitableSegment.profitShare}% of gross profit with an LTV:CAC of ${mostProfitableSegment.ltvCacRatio ?? "—"}x.`,
+      }
+    : {
+        title: "Add CAC + margin data",
+        detail: "Complete revenue inputs to unlock allocation recommendations.",
+      };
 
   const segmentCohortRows = segmentBreakdown.map((segment) => ({
     key: `segment-${segment.key}`,
@@ -1644,11 +1670,12 @@ const App = () => {
     ),
   }));
 
-  const segmentProfitRows = segmentProfitability.map((segment) => ({
+  const segmentProfitRows = segmentProfitabilityWithShare.map((segment) => ({
     key: `segment-profit-${segment.segment}`,
     Segment: segment.segment,
     Accounts: segment.count,
     "Total gross profit": formatNumber(segment.totalProfit),
+    "Profit share": `${segment.profitShare}%`,
     "LTV:CAC": segment.ltvCacRatio ? `${segment.ltvCacRatio}x` : "—",
     "CAC payback": segment.avgPayback ? `${segment.avgPayback} mo` : "—",
   }));
@@ -2227,9 +2254,10 @@ const App = () => {
         <div className="header-top">
           <div className="brand">
             <span className="logo">CT</span>
-            <div>
+            <div className="brand-text">
               <p className="eyebrow">Client Success Control Tower</p>
               <h1>{state.config.client_metadata.company_name || "Client Success Workspace"}</h1>
+              <p className="objective">{state.config.client_metadata.primary_objective || ""}</p>
             </div>
           </div>
           <div className="header-status">
@@ -2243,32 +2271,27 @@ const App = () => {
             </Badge>
           </div>
         </div>
-        <div className="header-body">
-          <p className="objective">{state.config.client_metadata.primary_objective || ""}</p>
-          <div className="meta">
-            <div className="meta-card">
-              <span className="label">FDE Lead</span>
-              <strong>{state.config.client_metadata.fde_lead || "—"}</strong>
-            </div>
-            <div className="meta-card">
-              <span className="label">Deployment timeline</span>
-              <strong>{state.config.client_metadata.deployment_timeline || "—"}</strong>
-            </div>
+        <div className="header-meta-row">
+          <div className="meta-chip">
+            <span>FDE Lead</span>
+            <strong>{state.config.client_metadata.fde_lead || "—"}</strong>
           </div>
-          <div className="meta">
-            <div className="meta-card">
-              <span className="label">Role</span>
-              <Select value={state.role} onValueChange={handleRoleChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="Operator">Operator</SelectItem>
-                  <SelectItem value="Viewer">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="meta-chip">
+            <span>Deployment timeline</span>
+            <strong>{state.config.client_metadata.deployment_timeline || "—"}</strong>
+          </div>
+          <div className="meta-chip role-chip">
+            <span>Role</span>
+            <Select value={state.role} onValueChange={handleRoleChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Admin">Admin</SelectItem>
+                <SelectItem value="Operator">Operator</SelectItem>
+                <SelectItem value="Viewer">Viewer</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </header>
@@ -2355,6 +2378,11 @@ const App = () => {
                       value={avgCacPaybackMonths ? `${avgCacPaybackMonths} mo` : "—"}
                     />
                     <KpiCard
+                      label="ROI Coverage"
+                      value={`${roiCoveragePct}%`}
+                      helper="Accounts with CAC + margin data"
+                    />
+                    <KpiCard
                       label="Most Profitable Segment"
                       value={mostProfitableSegment?.segment ?? "—"}
                       helper={
@@ -2363,6 +2391,13 @@ const App = () => {
                           : "Add CAC + margin data"
                       }
                     />
+                  </div>
+                  <div className="allocation-callout">
+                    <div>
+                      <span className="label">Spend recommendation</span>
+                      <strong>{roiRecommendation.title}</strong>
+                    </div>
+                    <p>{roiRecommendation.detail}</p>
                   </div>
                 </div>
                 <div className="kpi-group">
@@ -2575,7 +2610,7 @@ const App = () => {
                 <h3>Profitability by segment</h3>
                 <p className="help-text">Gross profit and LTV:CAC highlight where to concentrate marketing spend.</p>
                 <DataTable
-                  columns={["Segment", "Accounts", "Total gross profit", "LTV:CAC", "CAC payback"]}
+                  columns={["Segment", "Accounts", "Total gross profit", "Profit share", "LTV:CAC", "CAC payback"]}
                   rows={segmentProfitRows}
                 />
               </Card>
