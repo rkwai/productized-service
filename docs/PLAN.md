@@ -26,12 +26,13 @@
 - [ ] Add multi-tenant storage adapters (API + DB).
 
 ## Phase 4: Executive Experience (Current)
-- [ ] Ship a luxury-but-dense executive layout with whitespace used sparingly and intentionally.
-- [ ] Add a Marketing ROI strip (Portfolio LTV:CAC, CAC payback, profit concentration, coverage).
-- [ ] Add segment profitability leaderboard with allocation recommendation.
-- [ ] Introduce a typography system (single primary font, numeric tabular alignment).
-- [ ] Define a restrained color system (neutral base + semantic accents) with consistent meaning.
-- [ ] Validate a happy-path E2E that covers the new executive ROI functionality.
+- [x] Ship a luxury-but-dense executive layout with whitespace used sparingly and intentionally.
+- [x] Add a Marketing ROI strip (Portfolio LTV:CAC, CAC payback, profit concentration, coverage).
+- [x] Add segment profitability leaderboard with allocation recommendation.
+- [x] Introduce a typography system (single primary font, numeric tabular alignment).
+- [x] Define a restrained color system (neutral base + semantic accents) with consistent meaning.
+- [x] Validate a happy-path E2E that covers the new executive ROI functionality.
+- [x] Seed a 15-account portfolio with realistic productized service data across all menu views.
 
 ## Success criteria
 - Every field is editable and reflected in the live JSON.

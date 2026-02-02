@@ -8,7 +8,7 @@ The cockpit is a React + Vite SPA that models a client ontology and the operatio
 - `src/App.jsx`: Layout, routing, and page rendering.
 - `src/index.css`: Tailwind layers, CSS variables, and global layout styles.
 - `public/docs/ontology-map.json`: Canonical config payload.
-- `src/data/seed-data.js`: Seeded object instances + links.
+- `src/data/seed-data.js`: Seeded object instances + links (generated from account profiles).
 - `src/lib/storage.js`: Local persistence adapter.
 - `src/lib/dashboard.js`: Rendering helpers, field inference, and derived calculations.
 
@@ -26,6 +26,7 @@ The cockpit is a React + Vite SPA that models a client ontology and the operatio
 - Forms and lists are generated from `semantic_layer.object_types`.
 - Fields use type inference heuristics with optional overrides (`field_overrides`).
 - Explainability panels surface derived scores/flags with computation context.
+- Seed data is generated from a consistent account profile template to ensure every menu has realistic records (engagements, workstreams, milestones, risks, outcomes, and invoices).
 
 ## Executive UX layer
 - Design system tokens live in `src/index.css` (spacing, typography, color).
@@ -33,6 +34,7 @@ The cockpit is a React + Vite SPA that models a client ontology and the operatio
 - Whitespace is intentionally sparse: fewer, tighter gaps with larger emphasis inside priority cards.
 - Typography uses a single primary font with tabular numerics for KPI legibility.
 - A restrained neutral palette is paired with semantic accents for risk/ROI signals.
+- Executive action signals emphasize profit share vs CAC share with spend delta and recommended actions.
 
 ## Kinetic computation engine
 `src/lib/dashboard.js` calculates derived fields for:
@@ -43,6 +45,7 @@ The cockpit is a React + Vite SPA that models a client ontology and the operatio
 - Account health and renewal risk
 - Account segmentation
 - Revenue efficiency (LTV:CAC, CAC payback, gross profit)
+- Spend alignment signals (profit share vs CAC share, spend delta, action)
 
 The revenue efficiency layer combines:
 - `estimated_ltv`
@@ -51,6 +54,8 @@ The revenue efficiency layer combines:
 - `gross_margin_pct`
 
 to derive profit concentration by segment and executive-ready ROI signals.
+
+Segment tagging uses the provided `segment_tag` when present and falls back to derived segments when missing.
 
 Each derived value stores `value`, `computed_at`, and `explanation_json`.
 

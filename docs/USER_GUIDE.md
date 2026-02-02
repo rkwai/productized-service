@@ -17,8 +17,8 @@ npm run dev
 Use the role selector in the header to switch roles.
 
 ## Navigating the cockpit
-- **Home / Executive Summary**: Portfolio health, renewal risk, marketing ROI (LTV:CAC + CAC payback), and attention accounts.
-- **Portfolio (Accounts)**: Account list with health, LTV:CAC, and profitability signals by segment.
+- **Home / Executive Summary**: Executive priorities (LTV:CAC, profit leader, LTV at risk), marketing ROI, spend alignment, and attention accounts.
+- **Portfolio (Accounts)**: Account list with health, LTV:CAC, and profitability/spend alignment signals by segment.
 - **Engagement Health**: Delivery reliability, engagement health drivers, and renewal forecasts.
 - **Delivery Reliability**: Workstreams, milestones, and escalation readiness.
 - **Value Realization**: Outcomes and KPI progress with confidence scores.
@@ -39,6 +39,7 @@ Executives can review marketing ROI and profit concentration directly in the Hom
 - **LTV:CAC ratio** is computed from `estimated_ltv` and `customer_acquisition_cost` on each account.
 - **Most profitable segment** highlights where gross profit (LTV × margin %) concentrates.
 - **CAC payback months** is estimated from average monthly revenue and margin.
+- **Spend alignment** compares profit share to CAC share and assigns actions (Increase, Hold, Reduce).
 
 Update CAC, margin, and monthly revenue fields in **Admin / Settings** to keep the model accurate.
 
@@ -46,9 +47,12 @@ Update CAC, margin, and monthly revenue fields in **Admin / Settings** to keep t
 Use **Profitability by segment** on the Portfolio page to:
 - Identify which segment generates the highest gross profit.
 - Compare LTV:CAC efficiency and payback speed side-by-side.
-- Inform where to re-allocate marketing spend.
+- Compare profit share vs CAC share and act on spend deltas.
 
 The **Spend recommendation** callout on Home summarizes the top segment to fund based on profit share and LTV:CAC.
+
+## Reloading the seed dataset
+If you do not see the latest seed data, use **Admin / Settings → Reset changes** to clear local storage and reload the dataset from `src/data/seed-data.js`.
 
 ## Explainability
 Each derived score includes a panel describing the contributing signals and the timestamp of computation.

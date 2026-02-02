@@ -8,7 +8,7 @@ This prototype helps teams translate ontology definitions and field data into an
 - Connects delivery reliability to outcomes and KPIs.
 - Turns insights into actions with logged workflows.
 - Keeps ontology configuration editable and versioned.
-- Makes LTV:CAC and segment profitability visible for spend allocation decisions.
+- Makes LTV:CAC, segment profitability, and spend alignment visible for marketing allocation decisions.
 
 ## Quick start
 This is a React + Vite app with Tailwind + shadcn/ui components.
@@ -70,9 +70,10 @@ CI runs `npm run test:all` after installing Playwright browsers (see `.github/wo
 - All fields are editable in-place (Admin/Operator).
 - Viewers can browse but cannot edit.
 - The **Current JSON** panel reflects live edits and can be downloaded.
+- Use **Admin / Settings → Reset changes** to reload the seeded dataset from `src/data/seed-data.js`.
 
 ## Business value focus
-The cockpit keeps value signals visible (health, risk, outcome progress) with explainability panels to support renewal, expansion, and marketing ROI decisions. Executives can track LTV:CAC, CAC payback, and the most profitable segment to guide spend allocation.
+The cockpit keeps value signals visible (health, risk, outcome progress) with explainability panels to support renewal, expansion, and marketing ROI decisions. Executives can track LTV:CAC, CAC payback, profit share vs CAC share, and the most valuable segment to guide spend allocation.
 
 ## Roadmap
 See `docs/PLAN.md` for the full plan and next steps.
