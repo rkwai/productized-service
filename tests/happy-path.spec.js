@@ -6,7 +6,9 @@ test("happy path navigation and admin metadata update work", async ({ page }) =>
 
   await expect(page.locator('[data-page="home"]')).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Home / Executive Summary" })).toBeVisible();
-  await expect(page.getByText("Portfolio LTV:CAC")).toBeVisible();
+  await expect(
+    page.locator('[data-page="home"] .kpi-group').first().getByText("Portfolio LTV:CAC")
+  ).toBeVisible();
   await expect(page.getByText("Spend recommendation")).toBeVisible();
 
   await page.getByRole("link", { name: "Portfolio (Accounts)" }).click();

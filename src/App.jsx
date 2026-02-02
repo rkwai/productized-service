@@ -1743,6 +1743,12 @@ const App = () => {
 
   const segmentProfitRows = segmentProfitabilityAligned.map((segment) => ({
     key: `segment-profit-${segment.segment}`,
+    className:
+      segment.spendAction === "Increase spend"
+        ? "row-highlight-positive"
+        : segment.spendAction === "Reduce spend"
+          ? "row-highlight-negative"
+          : "",
     Segment: renderSegmentLabel(segment),
     Accounts: segment.count,
     "Total gross profit": formatNumber(segment.totalProfit),
@@ -1758,6 +1764,12 @@ const App = () => {
 
   const segmentSpendRows = spendAlignmentRows.map((segment) => ({
     key: `segment-spend-${segment.segment}`,
+    className:
+      segment.spendAction === "Increase spend"
+        ? "row-highlight-positive"
+        : segment.spendAction === "Reduce spend"
+          ? "row-highlight-negative"
+          : "",
     Segment: renderSegmentLabel(segment),
     "Gross profit": formatNumber(segment.totalProfit),
     "Profit share": `${segment.profitShare}%`,

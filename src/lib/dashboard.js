@@ -418,14 +418,16 @@ export const computeDerived = (state) => {
     });
 
     const valueScore = Number(account.estimated_ltv || 0);
+    const explicitSegment = String(account.segment_tag || "").trim();
     const segment =
-      valueScore > 5000000 && renewalRisk > 60
+      explicitSegment ||
+      (valueScore > 5000000 && renewalRisk > 60
         ? "High Value / High Risk"
         : valueScore > 5000000
           ? "High Value / Stable"
           : renewalRisk > 60
             ? "Growth / High Risk"
-            : "Growth / Stable";
+            : "Growth / Stable");
 
     setDerived(state, {
       object_type: "client_account",
@@ -434,6 +436,7 @@ export const computeDerived = (state) => {
       value: segment,
       computed_at: now,
       explanation_json: {
+        source: explicitSegment ? "provided" : "derived",
         estimated_ltv: valueScore,
         renewal_risk_score: renewalRisk,
       },
