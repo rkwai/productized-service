@@ -1221,6 +1221,35 @@ const App = () => {
     });
   };
 
+  const handleQuickAdd = (objectTypeId, targetPage) => {
+    let createdId = "";
+    applyUpdate((next) => {
+      const objectType = next.config.semantic_layer.object_types.find((t) => t.id === objectTypeId);
+      if (!objectType) return;
+      const record = createEmptyRecord(objectType);
+      if (!next.instances[objectTypeId]) {
+        next.instances[objectTypeId] = [];
+      }
+      next.instances[objectTypeId].push(record);
+      const idField =
+        objectType.properties.find((prop) => prop.endsWith("_id")) || objectType.properties[0];
+      createdId = record[idField];
+      generateAuditEntry(
+        {
+          action: "create",
+          object_type: objectTypeId,
+          object_id: createdId || "",
+        },
+        next
+      );
+    });
+    if (createdId) {
+      handleSelectObject({ page: targetPage, objectType: objectTypeId, objectId: createdId });
+    } else {
+      handleSelectObject({ page: targetPage });
+    }
+  };
+
   const handleActionSubmit = (action, formData) => {
     applyUpdate((next) => {
       next.action_log.unshift({
@@ -3080,6 +3109,32 @@ const App = () => {
               <Card className="panel">
                 <div className="panel-header">
                   <div>
+                    <h3>Quick capture</h3>
+                    <p>Start with a lead, log a deal, or add a customer to unlock recommendations.</p>
+                  </div>
+                  <Badge variant="secondary">Start here</Badge>
+                </div>
+                <div className="button-row">
+                  <Button onClick={() => handleQuickAdd("lead", "leads")} disabled={isViewer}>
+                    Add lead
+                  </Button>
+                  <Button variant="secondary" onClick={() => handleQuickAdd("deal", "deals")} disabled={isViewer}>
+                    Add deal
+                  </Button>
+                  <Button variant="ghost" onClick={() => handleQuickAdd("client_account", "portfolio")} disabled={isViewer}>
+                    Add customer
+                  </Button>
+                  <Button variant="ghost" onClick={() => handleSelectObject({ page: "admin" })}>
+                    Import data
+                  </Button>
+                </div>
+                <p className="help-text">
+                  Tip: Add CAC, margin, and revenue fields in Customers to unlock LTV:CAC insights.
+                </p>
+              </Card>
+              <Card className="panel">
+                <div className="panel-header">
+                  <div>
                     <h3>Priority focus</h3>
                     <p>Most valuable next step based on pipeline value and activation risk.</p>
                   </div>
@@ -3472,6 +3527,16 @@ const App = () => {
               <PageHeader
                 title="Leads"
                 description="Capture and advance leads through qualification and proposal."
+                action={
+                  <div className="action-row">
+                    <Button onClick={() => handleQuickAdd("lead", "leads")} disabled={isViewer}>
+                      Add lead
+                    </Button>
+                    <Button variant="ghost" onClick={() => handleSelectObject({ page: "admin" })}>
+                      Import leads
+                    </Button>
+                  </div>
+                }
               />
               <div className="kpi-row">
                 <KpiCard label="# Leads" value={filteredLeads.length} />
@@ -3592,6 +3657,16 @@ const App = () => {
               <PageHeader
                 title="Deals"
                 description="Track pipeline value and conversion progress."
+                action={
+                  <div className="action-row">
+                    <Button onClick={() => handleQuickAdd("deal", "deals")} disabled={isViewer}>
+                      Add deal
+                    </Button>
+                    <Button variant="ghost" onClick={() => handleSelectObject({ page: "admin" })}>
+                      Import deals
+                    </Button>
+                  </div>
+                }
               />
               <div className="kpi-row">
                 <KpiCard label="# Deals" value={filteredDeals.length} />
@@ -3724,6 +3799,16 @@ const App = () => {
               <PageHeader
                 title="Customers"
                 description="Monitor activation, retention, and profitability across customers."
+                action={
+                  <div className="action-row">
+                    <Button onClick={() => handleQuickAdd("client_account", "portfolio")} disabled={isViewer}>
+                      Add customer
+                    </Button>
+                    <Button variant="ghost" onClick={() => handleSelectObject({ page: "admin" })}>
+                      Import customers
+                    </Button>
+                  </div>
+                }
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">

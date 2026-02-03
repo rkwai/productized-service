@@ -18,6 +18,7 @@
 - [x] Update unit test runner to execute all files in `tests/unit`.
 - [ ] Add import preview/mapping UX (field mapping + error surfacing).
 - [x] Tune decision-engine scoring and map recommendations to workflows.
+- [ ] Add onboarding checklist and empty-state guidance for first-time owners.
 
 ## P2 (later)
 - [ ] Package north-star-review skill into a distributable `.skill` if needed.

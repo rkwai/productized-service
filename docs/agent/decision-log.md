@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Add quick-capture CTAs for ICP onboarding
+- Decision: Added a Quick capture panel on Home plus Add/Import actions on Leads/Deals/Customers pages.
+- Alternatives considered: Leave creation only in Settings or rely on import-only flows.
+- Rationale: Reduce the “where do I start?” friction for first-time owners.
+- Implications: Home page gets more CTAs; keep buttons aligned with future onboarding.
+- Follow-ups: Add a lightweight onboarding checklist and empty-state guidance.
+
 ## 2026-02-03 — Map decision-engine recommendations to workflow actions
 - Decision: Mapped lead/deal/customer recommendations to explicit action types and exposed “Run workflow” buttons in the UI.
 - Alternatives considered: Keep recommendations read-only; hard-code actions without config entries.

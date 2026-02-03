@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Added quick capture CTAs and page-level add/import actions for leads, deals, and customers.
+- Why: As an ICP, the app felt dense with no obvious “start here”; quick capture makes the first action obvious.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: Not run (UI copy/CTA changes only).
+- Metrics / instrumentation: None.
+- Follow-ups: Consider onboarding checklist and empty-state guidance for first-time users.
+
+## 2026-02-03
 - Outcome: Updated the E2E happy-path test to align with the renamed navigation and KPI labels.
 - Why: UI copy changes broke the Playwright selector expectations.
 - Key changes (files/areas): `tests/happy-path.spec.js`.
