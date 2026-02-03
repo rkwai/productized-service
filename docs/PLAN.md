@@ -6,6 +6,45 @@
 3. Ensure derived scores are explainable and linked to actions.
 4. Support governance with role-based access and audit trails.
 
+## Internal Launch Sprint Plan (Feb 3–10, 2026)
+
+### Goal
+- Ship a local-first internal launch that helps a productized-service business owner capture leads, activate customers, and surface the most profitable segment (LTV:CAC).
+
+### Scope (must-haves for Feb 10)
+- Refactor existing code/design to align with the lead lifecycle and activation workflows.
+- Capture leads with lifecycle stages and next steps.
+- Convert leads into customers and track onboarding/activation milestones.
+- Provide business analytics with LTV, CAC, and LTV:CAC by segment.
+- Support data import (file-based) for leads/customers.
+- Present a focused executive UI that highlights the single most important priority.
+
+### Non-goals (Feb 10)
+- Multi-user accounts or permissions.
+- Payments/billing.
+- Live integrations with external CRMs or data providers.
+
+### Acceptance criteria (Feb 10)
+- A business owner can add a lead, advance its stage, and convert it to a customer.
+- Onboarding/activation milestones are visible with status and next steps.
+- LTV:CAC and most-profitable-segment insights are visible on the executive view.
+- Data can be imported from a local file into the system (format TBD).
+- App runs locally on the existing stack without new runtime dependencies.
+
+### Risks / unknowns
+- Existing account-portfolio UI/data model needs alignment with lead lifecycle goals.
+- Data model updates required for lead pipeline and onboarding stages.
+- Import format and validation rules not defined.
+- UI scope may exceed the 1-week window if flows are not tightly scoped.
+
+### Draft milestone plan (confirm dates)
+- Feb 3: Refactor existing code/design to align with lead lifecycle + activation goals.
+- Feb 3–4: Finalize data model + ontology config for Lead, Deal, Milestone, and Segment analytics.
+- Feb 4–6: Implement lead capture + pipeline flow and conversion to customer.
+- Feb 6–8: Implement onboarding/activation milestones and health tracking.
+- Feb 8–9: Add data import flow and analytics view polish.
+- Feb 9–10: UX refinement, QA, and launch readiness checklist.
+
 ## Phase 1: Foundation
 - [x] Establish baseline data model from the supplied JSON.
 - [x] Build a static app shell with a value-first summary header.

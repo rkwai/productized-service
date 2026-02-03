@@ -1,14 +1,14 @@
-# Ontology Decision Cockpit UI
+# Productized Service Decision Cockpit UI
 
-A configuration-driven, dependency-free decision cockpit for viewing and editing a Palantir-style ontology plus live operational data. The UI is built for business stakeholders to steer renewal readiness, delivery reliability, measurable value realization, and marketing ROI (LTV:CAC + profitability by segment).
+A configuration-driven, dependency-free cockpit for productized-service business owners to capture leads, activate customers, and see profitability signals (LTV:CAC by segment).
 
 ## Why this exists
-This prototype helps teams translate ontology definitions and field data into an operational cockpit that:
-- Surfaces renewal and expansion readiness signals with explainability.
-- Connects delivery reliability to outcomes and KPIs.
+This prototype helps productized-service owners translate lead/customer data into an operational cockpit that:
+- Makes lead stages and next steps visible.
+- Tracks onboarding and activation milestones.
 - Turns insights into actions with logged workflows.
-- Keeps ontology configuration editable and versioned.
-- Makes LTV:CAC, segment profitability, and spend alignment visible for marketing allocation decisions.
+- Keeps the data model configuration editable and versioned.
+- Highlights LTV:CAC, segment profitability, and focus recommendations.
 
 ## Quick start
 This is a React + Vite app with Tailwind + shadcn/ui components.
@@ -73,7 +73,7 @@ CI runs `npm run test:all` after installing Playwright browsers (see `.github/wo
 - Use **Admin / Settings → Reset changes** to reload the seeded dataset from `src/data/seed-data.js`.
 
 ## Business value focus
-The cockpit keeps value signals visible (health, risk, outcome progress) with explainability panels to support renewal, expansion, and marketing ROI decisions. Executives can track LTV:CAC, CAC payback, profit share vs CAC share, and the most valuable segment to guide spend allocation.
+The cockpit keeps value signals visible (conversion, activation progress, segment profitability) with explainability panels to support lead conversion and marketing focus. Owners can track LTV:CAC, profit concentration by segment, and the most valuable segment to guide where to invest next.
 
 ## Roadmap
 See `docs/PLAN.md` for the full plan and next steps.
