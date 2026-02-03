@@ -552,6 +552,49 @@ export const initialData = {
           "Segment by engagement_value / estimated_ltv and retention risk score into cohorts (e.g., High value + High risk for owner attention).",
         output: "derived_property:client_account.segment_tag",
       },
+      {
+        id: "calculate_data_freshness_days",
+        logic:
+          "Data freshness days = days since the latest activity across account created_date, engagement activity, stakeholder touches, and milestone completion.",
+        output: "derived_property:client_account.data_freshness_days",
+      },
+      {
+        id: "calculate_data_freshness_score",
+        logic: "Data freshness score = clamp(100 - data_freshness_days * 2, 0, 100).",
+        output: "derived_property:client_account.data_freshness_score",
+      },
+      {
+        id: "identify_missing_account_fields",
+        logic:
+          "Missing data fields = required account fields with empty values (industry, region, account_status, segment_tag, estimated_ltv, total_contract_value_to_date, customer_acquisition_cost, avg_monthly_revenue, gross_margin_pct).",
+        output: "derived_property:client_account.missing_data_fields",
+      },
+      {
+        id: "calculate_churn_risk_score",
+        logic:
+          "Churn risk score = min(100, renewal_risk_score * 0.6 + (100 - health_score) * 0.3 + data_freshness_days * 0.2).",
+        output: "derived_property:client_account.churn_risk_score",
+      },
+      {
+        id: "calculate_ltv_at_risk",
+        logic: "LTV at risk = estimated_ltv * churn_risk_score / 100.",
+        output: "derived_property:client_account.ltv_at_risk",
+      },
+      {
+        id: "calculate_ltv_cac_ratio",
+        logic: "LTV:CAC ratio = estimated_ltv / customer_acquisition_cost (null if CAC <= 0).",
+        output: "derived_property:client_account.ltv_cac_ratio",
+      },
+      {
+        id: "calculate_gross_profit",
+        logic: "Gross profit = estimated_ltv * gross_margin_pct.",
+        output: "derived_property:client_account.gross_profit",
+      },
+      {
+        id: "calculate_cac_payback_months",
+        logic: "CAC payback months = customer_acquisition_cost / (avg_monthly_revenue * gross_margin_pct).",
+        output: "derived_property:client_account.cac_payback_months",
+      },
     ],
     action_types: [
       {

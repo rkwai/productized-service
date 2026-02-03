@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Lock the v1 data model + analytics definitions
+- Decision: Documented the v1 schema (required fields + lifecycle values) and codified KPI formulas; updated ontology configs to reflect derived revenue/health metrics.
+- Alternatives considered: Keep definitions implicit in code only; delay until after the “brain” is implemented.
+- Rationale: Clear schema + metric definitions reduce churn and make upcoming decision-engine work deterministic.
+- Implications: Future schema changes must update docs + config together.
+- Follow-ups: Audit any new derived metrics against the documented definitions.
+
 ## 2026-02-03 — Add a simple unit test runner script
 - Decision: Added a lightweight `tests/unit/run.mjs` runner and updated the npm script to use it.
 - Alternatives considered: Keep shell globbing (`node tests/unit/*.mjs`) or adopt a test framework.
