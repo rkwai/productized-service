@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Auto-create onboarding plan on deal conversion
+- Decision: Generate a consulting engagement, workstreams, and milestones automatically when a deal converts to a customer.
+- Alternatives considered: Prompt the user to configure onboarding manually; create only a placeholder engagement.
+- Rationale: Ensure activation workflows are immediately available post-conversion.
+- Implications: Onboarding templates are hard-coded in the UI until configurable.
+- Follow-ups: Move onboarding templates into config for easier edits.
+
 ## 2026-02-03 — Log marketing focus decisions from segment profitability
 - Decision: Added a “Log focus” action on the segment profitability table to record marketing focus decisions.
 - Alternatives considered: Rely on manual notes; add a separate marketing plan module.

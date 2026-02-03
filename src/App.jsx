@@ -155,6 +155,48 @@ const LEAD_STAGE_COLORS = {
   Negotiation: "status-pill--warn",
   Won: "status-pill--good",
 };
+const ONBOARDING_WORKSTREAM_TEMPLATES = [
+  {
+    name: "Onboarding",
+    priority: "High",
+    milestones: [
+      {
+        name: "Kickoff complete",
+        description: "Align goals, success criteria, and timeline.",
+        acceptance: "Kickoff recap approved by owner.",
+        offsetDays: 7,
+        signoff: false,
+      },
+      {
+        name: "Activation plan approved",
+        description: "Confirm activation plan and milestone owners.",
+        acceptance: "Activation plan approved by sponsor.",
+        offsetDays: 21,
+        signoff: true,
+      },
+    ],
+  },
+  {
+    name: "Activation",
+    priority: "Medium",
+    milestones: [
+      {
+        name: "First value delivered",
+        description: "Ship the first tangible customer win.",
+        acceptance: "Customer confirms value delivered.",
+        offsetDays: 35,
+        signoff: true,
+      },
+      {
+        name: "Operating cadence live",
+        description: "Weekly operating cadence and reporting in place.",
+        acceptance: "Cadence confirmed for 30 days.",
+        offsetDays: 60,
+        signoff: false,
+      },
+    ],
+  },
+];
 const DEAL_STATUS_COLORS = {
   Open: "status-pill--warn",
   Won: "status-pill--good",
@@ -1496,6 +1538,122 @@ const App = () => {
       }
       if (leadRecord) {
         ensureLink("lead_converts_to_account", leadRecord.lead_id, createdId);
+      }
+
+      const engagementExists = (next.instances.consulting_engagement || []).some(
+        (engagement) => engagement.account_id === createdId
+      );
+      if (!engagementExists) {
+        const engagementType = next.config.semantic_layer.object_types.find(
+          (type) => type.id === "consulting_engagement"
+        );
+        const workstreamType = next.config.semantic_layer.object_types.find(
+          (type) => type.id === "workstream"
+        );
+        const milestoneType = next.config.semantic_layer.object_types.find(
+          (type) => type.id === "milestone"
+        );
+        if (engagementType && workstreamType && milestoneType) {
+          if (!next.instances.consulting_engagement) {
+            next.instances.consulting_engagement = [];
+          }
+          if (!next.instances.workstream) {
+            next.instances.workstream = [];
+          }
+          if (!next.instances.milestone) {
+            next.instances.milestone = [];
+          }
+
+          const teamMembers = next.instances.team_member || [];
+          const ownerId =
+            teamMembers.find((member) => member.active_flag)?.team_member_id ||
+            teamMembers[0]?.team_member_id ||
+            "";
+          const addDays = (base, days) => {
+            const nextDate = new Date(base);
+            nextDate.setDate(nextDate.getDate() + days);
+            return nextDate.toISOString().split("T")[0];
+          };
+          const engagement = createEmptyRecord(engagementType);
+          engagement.account_id = createdId;
+          engagement.engagement_name = `${newAccount.account_name} Activation Program`;
+          engagement.status = "Active";
+          engagement.start_date = todayIso;
+          engagement.end_date = addDays(todayIso, 90);
+          engagement.engagement_value = deal.amount || "";
+          engagement.billing_model = "Monthly Retainer";
+          engagement.renewal_date = addDays(todayIso, 180);
+          engagement.success_criteria_summary = "Activation milestones completed and value delivered.";
+          engagement.executive_sponsor_stakeholder_id = "";
+          engagement.engagement_lead_team_member_id = ownerId;
+          engagement.governance_cadence = "Monthly";
+          engagement.engagement_health_score = 80;
+          next.instances.consulting_engagement.push(engagement);
+          generateAuditEntry(
+            {
+              action: "create",
+              object_type: "consulting_engagement",
+              object_id: engagement.engagement_id,
+            },
+            next
+          );
+
+          ensureLink("account_has_engagement", createdId, engagement.engagement_id);
+
+          ONBOARDING_WORKSTREAM_TEMPLATES.forEach((template) => {
+            const workstream = createEmptyRecord(workstreamType);
+            workstream.engagement_id = engagement.engagement_id;
+            workstream.name = template.name;
+            workstream.owner_team_member_id = ownerId;
+            workstream.status = "On Track";
+            workstream.priority = template.priority;
+            next.instances.workstream.push(workstream);
+            generateAuditEntry(
+              {
+                action: "create",
+                object_type: "workstream",
+                object_id: workstream.workstream_id,
+              },
+              next
+            );
+            ensureLink(
+              "engagement_has_workstream",
+              engagement.engagement_id,
+              workstream.workstream_id
+            );
+
+            template.milestones.forEach((milestoneTemplate) => {
+              const milestone = createEmptyRecord(milestoneType);
+              milestone.workstream_id = workstream.workstream_id;
+              milestone.name = milestoneTemplate.name;
+              milestone.description = milestoneTemplate.description;
+              milestone.status = "In Progress";
+              milestone.planned_date = todayIso;
+              milestone.due_date = addDays(todayIso, milestoneTemplate.offsetDays);
+              milestone.completed_date = "";
+              milestone.acceptance_criteria = milestoneTemplate.acceptance;
+              milestone.owner_team_member_id = ownerId;
+              milestone.client_signoff_required_flag = milestoneTemplate.signoff;
+              milestone.client_signoff_date = "";
+              milestone.confidence_level = "Medium";
+              milestone.blocker_summary = "";
+              next.instances.milestone.push(milestone);
+              generateAuditEntry(
+                {
+                  action: "create",
+                  object_type: "milestone",
+                  object_id: milestone.milestone_id,
+                },
+                next
+              );
+              ensureLink(
+                "workstream_has_milestone",
+                workstream.workstream_id,
+                milestone.milestone_id
+              );
+            });
+          });
+        }
       }
     });
 

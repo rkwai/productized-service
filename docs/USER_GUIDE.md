@@ -19,7 +19,7 @@ Use the role selector in the header to switch roles.
 ## Navigating the cockpit
 - **Home / Owner Summary**: Owner priorities (LTV:CAC, profit leader, LTV at risk), quick capture, priority focus (with run workflow buttons), segment ROI, spend alignment, and attention customers.
 - **Leads**: Lead pipeline with stages, capture gaps, next steps, and quick actions to create deals.
-- **Deals**: Opportunity pipeline with conversion stages, expected close dates, and quick actions to convert deals into customers.
+- **Deals**: Opportunity pipeline with conversion stages, expected close dates, and quick actions to convert deals into customers (auto-creates onboarding workstreams and milestones).
 - **Customers**: Customer list with lifecycle stage, activation status, quick actions for activation/retention, and profitability/spend alignment signals by segment.
 - **Activation Health**: Activation reliability, health drivers, and retention forecasts.
 - **Activation Milestones**: Workstreams, milestones, and escalation readiness.

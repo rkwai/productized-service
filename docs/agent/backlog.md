@@ -22,7 +22,7 @@
 - [ ] Add lead capture filters for gaps/stale status.
 - [x] Add one-click lead conversion (lead → deal) from the pipeline view.
 - [x] Add deal → customer conversion quick action.
-- [ ] Auto-create onboarding activation plan when converting a deal.
+- [x] Auto-create onboarding activation plan when converting a deal.
 - [ ] Add `set_marketing_focus` action type to config + action map.
 
 ## P2 (later)

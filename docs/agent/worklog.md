@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Auto-created onboarding engagement/workstreams/milestones when converting a deal to a customer.
+- Why: Ensure activation milestones appear immediately after conversion without manual setup.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Add a configurable onboarding template in config.
+
+## 2026-02-03
 - Outcome: Added a marketing focus log action on the segment profitability table.
 - Why: Make the “take action on most valuable segment” step explicit and traceable.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
