@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Highlighted lead capture hygiene with KPIs, capture-gap badges, warn-row styling, and a lead quick-edit panel; added stage/status pills for leads and deals.
+- Why: As an ICP, I needed to immediately see which leads were incomplete or stale before worrying about pipeline value.
+- Key changes (files/areas): `src/App.jsx`, `src/index.css`, `docs/USER_GUIDE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Add lead capture filters (gaps/stale) and a one-click convert-to-deal action.
+
+## 2026-02-03
 - Outcome: Added quick capture CTAs and page-level add/import actions for leads, deals, and customers.
 - Why: As an ICP, the app felt dense with no obvious “start here”; quick capture makes the first action obvious.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.

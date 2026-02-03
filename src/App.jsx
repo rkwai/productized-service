@@ -77,6 +77,13 @@ const formatSignedPercent = (value) => {
   return `${rounded > 0 ? "+" : ""}${rounded}%`;
 };
 const formatDays = (value) => (Number.isFinite(value) ? `${value}d` : "—");
+const isBlank = (value) => value == null || String(value).trim() === "";
+const daysSince = (value) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return Math.max(0, Math.round((Date.now() - parsed.getTime()) / (1000 * 60 * 60 * 24)));
+};
 const getHealthTone = (value) => {
   if (!Number.isFinite(value)) return "status-pill--neutral";
   if (value >= 75) return "status-pill--good";
@@ -117,6 +124,45 @@ const getActivationTone = (value) => {
   return "status-pill--warn";
 };
 const StatusPill = ({ label, tone }) => <span className={`status-pill ${tone}`}>{label}</span>;
+const LEAD_STALE_DAYS = 14;
+const LEAD_CAPTURE_FIELDS = [
+  { key: "company_name", label: "Company" },
+  { key: "contact_name", label: "Contact" },
+  { key: "contact_email", label: "Email" },
+  { key: "source", label: "Source" },
+  { key: "stage", label: "Stage" },
+  { key: "next_step_summary", label: "Next step" },
+  { key: "expected_value", label: "Expected value" },
+  { key: "owner_team_member_id", label: "Owner" },
+];
+const getMissingLeadFields = (lead) =>
+  LEAD_CAPTURE_FIELDS.filter((field) => isBlank(lead?.[field.key])).map((field) => field.label);
+const LEAD_STATUS_COLORS = {
+  Open: "status-pill--warn",
+  Converted: "status-pill--good",
+  Lost: "status-pill--bad",
+};
+const LEAD_STAGE_COLORS = {
+  Lead: "status-pill--neutral",
+  Qualified: "status-pill--warn",
+  Proposal: "status-pill--warn",
+  Negotiation: "status-pill--warn",
+  Won: "status-pill--good",
+};
+const DEAL_STATUS_COLORS = {
+  Open: "status-pill--warn",
+  Won: "status-pill--good",
+  Lost: "status-pill--bad",
+};
+const DEAL_STAGE_COLORS = {
+  Discovery: "status-pill--neutral",
+  Proposal: "status-pill--warn",
+  Negotiation: "status-pill--warn",
+  "Closed Won": "status-pill--good",
+  "Closed Lost": "status-pill--bad",
+};
+const getToneByValue = (value, palette, fallback = "status-pill--neutral") =>
+  palette[value] || fallback;
 const PORTFOLIO_COLUMNS = [
   "Select",
   "Customer",
@@ -928,7 +974,16 @@ const GlobalFiltersBar = ({ filters, onChange, filterOptions }) => (
   </div>
 );
 
-const ObjectViewPanel = ({ record, objectType, derivedValues, relationships, onAction = [] }) => {
+const ObjectViewPanel = ({
+  record,
+  objectType,
+  derivedValues,
+  relationships,
+  onAction = [],
+  onUpdateRecord,
+  referenceMap = {},
+  isViewer = false,
+}) => {
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
@@ -950,6 +1005,28 @@ const ObjectViewPanel = ({ record, objectType, derivedValues, relationships, onA
   const idField = objectType.properties.find((prop) => prop.endsWith("_id"));
   const missingId = !record[idField];
   const evidenceLinks = [record.evidence_link, record.notes_link].filter(Boolean);
+  const quickEditFields =
+    objectType.id === "lead"
+      ? [
+          "company_name",
+          "contact_name",
+          "contact_email",
+          "source",
+          "stage",
+          "status",
+          "owner_team_member_id",
+          "next_step_summary",
+          "expected_value",
+          "last_contacted_at",
+        ]
+      : [];
+  const showQuickEdit = quickEditFields.length && onUpdateRecord;
+  const handleQuickEditChange = (field, value) => {
+    if (!onUpdateRecord) return;
+    const recordId = record[idField];
+    if (!recordId) return;
+    onUpdateRecord(objectType.id, recordId, { [field]: value });
+  };
 
   return (
     <aside className="object-panel">
@@ -982,6 +1059,27 @@ const ObjectViewPanel = ({ record, objectType, derivedValues, relationships, onA
               </div>
             ))}
           </div>
+          {showQuickEdit ? (
+            <div className="object-section">
+              <h4>Quick edit</h4>
+              <p className="help-text">
+                Update the core fields needed to keep this lead moving.
+              </p>
+              <div className="field-grid">
+                {quickEditFields.map((field) => (
+                  <RecordField
+                    key={field}
+                    label={field}
+                    value={record[field]}
+                    fieldType={inferFieldType(field, objectType.field_overrides || {})}
+                    referenceMap={referenceMap}
+                    onChange={(value) => handleQuickEditChange(field, value)}
+                    disabled={isViewer}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
           {derivedValues.map((derived) => (
             <DerivedPanel key={derived.field} derived={derived} label={derived.field} />
           ))}
@@ -1704,6 +1802,28 @@ const App = () => {
     (state?.instances[objectTypeId] || []).find((item) =>
       Object.values(item).includes(objectId)
     );
+  const updateRecordById = (objectTypeId, objectId, updates) => {
+    applyUpdate((next) => {
+      if (!next.instances[objectTypeId]) {
+        next.instances[objectTypeId] = [];
+      }
+      const objectType = next.config.semantic_layer.object_types.find((type) => type.id === objectTypeId);
+      const idField = objectType?.properties?.find((prop) => prop.endsWith("_id")) || objectType?.properties?.[0];
+      const index = next.instances[objectTypeId].findIndex(
+        (item) => (idField ? item[idField] === objectId : false) || Object.values(item).includes(objectId)
+      );
+      if (index === -1) return;
+      Object.assign(next.instances[objectTypeId][index], updates);
+      generateAuditEntry(
+        {
+          action: "update",
+          object_type: objectTypeId,
+          object_id: next.instances[objectTypeId][index][idField] || objectId,
+        },
+        next
+      );
+    });
+  };
 
   const accounts = state?.instances.client_account || [];
   const leads = state?.instances.lead || [];
@@ -1725,6 +1845,10 @@ const App = () => {
   const snapshots = state?.instances.kpi_snapshot || [];
 
   const activePage = useMemo(() => resolveActivePage({ route }), [route]);
+  const referenceMap = useMemo(
+    () => (state ? buildReferenceMap(state.config, state.instances) : {}),
+    [state]
+  );
 
   const selectedObjectType = route.objectType;
   const selectedObjectId = route.objectId;
@@ -2591,7 +2715,9 @@ const App = () => {
     if (leadFilters.stage !== "all" && lead.stage !== leadFilters.stage) return false;
     if (leadFilters.status !== "all" && lead.status !== leadFilters.status) return false;
     if (!normalizedLeadSearch) return true;
+    const leadId = String(lead.lead_id || "");
     const haystack = [
+      leadId,
       lead.company_name,
       lead.contact_name,
       lead.contact_email,
@@ -2604,13 +2730,27 @@ const App = () => {
       .toLowerCase();
     return haystack.includes(normalizedLeadSearch);
   });
+  const leadCaptureSignals = filteredLeads.map((lead) => {
+    const missingFields = getMissingLeadFields(lead);
+    const staleDays = daysSince(lead.last_contacted_at);
+    return {
+      lead,
+      missingFields,
+      staleDays,
+      missingContact: isBlank(lead.contact_name) || isBlank(lead.contact_email),
+      missingNextStep: isBlank(lead.next_step_summary),
+      isStale: Number.isFinite(staleDays) && staleDays >= LEAD_STALE_DAYS,
+    };
+  });
 
   const normalizedDealSearch = dealFilters.search.trim().toLowerCase();
   const filteredDeals = deals.filter((deal) => {
     if (dealFilters.stage !== "all" && deal.stage !== dealFilters.stage) return false;
     if (dealFilters.status !== "all" && deal.status !== dealFilters.status) return false;
     if (!normalizedDealSearch) return true;
+    const dealId = String(deal.deal_id || "");
     const haystack = [
+      dealId,
       deal.deal_name,
       deal.stage,
       deal.status,
@@ -2633,6 +2773,10 @@ const App = () => {
     (sum, lead) => sum + (Number(lead.expected_value) || 0),
     0
   );
+  const leadIncompleteCount = leadCaptureSignals.filter((item) => item.missingFields.length).length;
+  const leadMissingContactCount = leadCaptureSignals.filter((item) => item.missingContact).length;
+  const leadMissingNextStepCount = leadCaptureSignals.filter((item) => item.missingNextStep).length;
+  const leadStaleCount = leadCaptureSignals.filter((item) => item.isStale).length;
 
   const openDealCount = filteredDeals.filter(
     (deal) => (deal.status || "").toLowerCase() === "open"
@@ -3516,6 +3660,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>
@@ -3543,6 +3690,12 @@ const App = () => {
                 <KpiCard label="Open leads" value={openLeadCount} />
                 <KpiCard label="Qualified" value={qualifiedLeadCount} />
                 <KpiCard label="Converted" value={convertedLeadCount} />
+                <KpiCard
+                  label="Capture gaps"
+                  value={leadIncompleteCount}
+                  helper={`${leadMissingContactCount} missing contact · ${leadStaleCount} stale`}
+                />
+                <KpiCard label="Needs next step" value={leadMissingNextStepCount} />
                 <KpiCard label="Pipeline value" value={`$${formatNumber(leadPipelineValue)}`} />
               </div>
               <div className="module-grid">
@@ -3554,7 +3707,7 @@ const App = () => {
                         <div className="toolbar-block">
                           <span>Search</span>
                           <Input
-                            placeholder="Search leads"
+                            placeholder="Search leads, contacts, or IDs"
                             value={leadFilters.search}
                             onChange={(event) =>
                               setLeadFilters((prev) => ({ ...prev, search: event.target.value }))
@@ -3610,17 +3763,40 @@ const App = () => {
                         "Company",
                         "Stage",
                         "Status",
+                        "Capture gaps",
                         "Owner",
                         "Next step",
                         "Expected value",
                         "Last contacted",
                         "Source",
                       ]}
-                      rows={filteredLeads.map((lead) => ({
+                      rows={leadCaptureSignals.map(({ lead, missingFields, isStale }) => ({
                         key: lead.lead_id,
+                        className: missingFields.length || isStale ? "row-highlight-warn" : "",
                         Company: lead.company_name,
-                        Stage: lead.stage,
-                        Status: lead.status,
+                        Stage: (
+                          <StatusPill
+                            label={lead.stage || "—"}
+                            tone={getToneByValue(lead.stage, LEAD_STAGE_COLORS)}
+                          />
+                        ),
+                        Status: (
+                          <StatusPill
+                            label={lead.status || "—"}
+                            tone={getToneByValue(lead.status, LEAD_STATUS_COLORS)}
+                          />
+                        ),
+                        "Capture gaps": missingFields.length ? (
+                          <div className="missing-data">
+                            <StatusPill
+                              label={`${missingFields.length} gaps`}
+                              tone="status-pill--warn"
+                            />
+                            <span>{missingFields.slice(0, 2).join(", ")}</span>
+                          </div>
+                        ) : (
+                          <StatusPill label="Complete" tone="status-pill--good" />
+                        ),
                         Owner:
                           teamMemberMap.get(lead.owner_team_member_id)?.name ||
                           lead.owner_team_member_id ||
@@ -3646,6 +3822,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>
@@ -3760,8 +3939,18 @@ const App = () => {
                         return {
                           key: deal.deal_id,
                           Deal: deal.deal_name,
-                          Stage: deal.stage,
-                          Status: deal.status,
+                          Stage: (
+                            <StatusPill
+                              label={deal.stage || "—"}
+                              tone={getToneByValue(deal.stage, DEAL_STAGE_COLORS)}
+                            />
+                          ),
+                          Status: (
+                            <StatusPill
+                              label={deal.status || "—"}
+                              tone={getToneByValue(deal.status, DEAL_STATUS_COLORS)}
+                            />
+                          ),
                           Amount: Number.isFinite(Number(deal.amount))
                             ? `$${formatNumber(Number(deal.amount))}`
                             : "—",
@@ -3788,6 +3977,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>
@@ -4107,6 +4299,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>
@@ -4317,6 +4512,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>
@@ -4454,6 +4652,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>
@@ -4586,6 +4787,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>
@@ -4676,6 +4880,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>
@@ -4765,6 +4972,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>
@@ -4848,6 +5058,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>
@@ -4963,6 +5176,9 @@ const App = () => {
                   objectType={selectedObjectTypeDef}
                   derivedValues={derivedForSelected}
                   relationships={relationshipsForSelected}
+                  onUpdateRecord={updateRecordById}
+                  referenceMap={referenceMap}
+                  isViewer={isViewer}
                   onAction={actionOptions}
                 />
               </div>

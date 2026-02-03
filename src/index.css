@@ -1120,6 +1120,14 @@ tbody tr:hover {
   background: rgba(239, 68, 68, 0.18);
 }
 
+.row-highlight-warn {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.row-highlight-warn:hover {
+  background: rgba(245, 158, 11, 0.18);
+}
+
 .table-group-row {
   background: rgba(255, 255, 255, 0.03);
   font-weight: 600;

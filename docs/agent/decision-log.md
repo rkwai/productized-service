@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Surface lead capture hygiene signals in the pipeline
+- Decision: Added capture-gap KPIs/badges, stage/status pills, and a lead quick-edit panel to make incomplete leads visible and fixable in-line.
+- Alternatives considered: Keep lead table minimal and rely on the detail panel for data issues; add a separate “lead hygiene” page.
+- Rationale: ICP needs a fast signal for missing lead data before working the pipeline.
+- Implications: Lead pipeline is denser; we may need filters for gaps/stale status.
+- Follow-ups: Add lead capture filters and one-click lead → deal conversion.
+
 ## 2026-02-03 — Add quick-capture CTAs for ICP onboarding
 - Decision: Added a Quick capture panel on Home plus Add/Import actions on Leads/Deals/Customers pages.
 - Alternatives considered: Leave creation only in Settings or rely on import-only flows.

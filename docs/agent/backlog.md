@@ -19,6 +19,8 @@
 - [ ] Add import preview/mapping UX (field mapping + error surfacing).
 - [x] Tune decision-engine scoring and map recommendations to workflows.
 - [ ] Add onboarding checklist and empty-state guidance for first-time owners.
+- [ ] Add lead capture filters for gaps/stale status.
+- [ ] Add one-click lead conversion (lead → deal) from the pipeline view.
 
 ## P2 (later)
 - [ ] Package north-star-review skill into a distributable `.skill` if needed.
