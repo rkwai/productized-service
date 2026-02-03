@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Added Leads and Deals pages with filters, KPIs, and object details.
+- Why: Surface the lead/deal lifecycle in the UI to match the new data model.
+- Key changes (files/areas): `src/App.jsx`, `src/lib/routing.mjs`, `docs/USER_GUIDE.md`.
+- Tests: `npm run test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Add lead/deal import flow and next-step automation.
+
+## 2026-02-03
 - Outcome: Refactored ontology config + seed data to add lead/deal objects and lifecycle fields while keeping legacy IDs intact.
 - Why: Align the data model with lead → activation → retention without breaking the current UI.
 - Key changes (files/areas): `public/docs/ontology-map.json`, `docs/ontology-map.json`, `src/data/initial-data.js`, `src/data/seed-data.js`, `docs/agent/backlog.md`, `docs/agent/decision-log.md`.

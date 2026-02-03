@@ -1,5 +1,7 @@
 export const NAV_ITEMS = [
   { path: "home", label: "Home / Owner Summary" },
+  { path: "leads", label: "Leads" },
+  { path: "deals", label: "Deals" },
   { path: "portfolio", label: "Customers" },
   { path: "engagement-health", label: "Activation Health" },
   { path: "delivery-reliability", label: "Activation Milestones" },

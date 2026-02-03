@@ -1003,6 +1003,8 @@ const App = () => {
   const [portfolioFilters, setPortfolioFilters] = useState(PORTFOLIO_VIEW_PRESETS[0].filters);
   const [portfolioColumns, setPortfolioColumns] = useState(PORTFOLIO_VIEW_PRESETS[0].columns);
   const [selectedPortfolioAccounts, setSelectedPortfolioAccounts] = useState([]);
+  const [leadFilters, setLeadFilters] = useState({ search: "", stage: "all", status: "all" });
+  const [dealFilters, setDealFilters] = useState({ search: "", stage: "all", status: "all" });
 
   useEffect(() => {
     let isMounted = true;
@@ -1240,6 +1242,8 @@ const App = () => {
     );
 
   const accounts = state?.instances.client_account || [];
+  const leads = state?.instances.lead || [];
+  const deals = state?.instances.deal || [];
   const engagements = state?.instances.consulting_engagement || [];
   const workstreams = state?.instances.workstream || [];
   const milestones = state?.instances.milestone || [];
@@ -1893,6 +1897,8 @@ const App = () => {
   });
 
   const teamMemberMap = new Map(teamMembers.map((member) => [member.team_member_id, member]));
+  const accountMap = new Map(accounts.map((account) => [account.account_id, account]));
+  const leadMap = new Map(leads.map((lead) => [lead.lead_id, lead]));
   const workstreamMap = new Map(workstreams.map((workstream) => [workstream.workstream_id, workstream]));
   const today = new Date();
 
@@ -2059,6 +2065,75 @@ const App = () => {
       { label: "Complete", value: "complete" },
     ],
   };
+
+  const leadStageOptions = Array.from(new Set(leads.map((lead) => lead.stage))).filter(Boolean);
+  const leadStatusOptions = Array.from(new Set(leads.map((lead) => lead.status))).filter(Boolean);
+  const dealStageOptions = Array.from(new Set(deals.map((deal) => deal.stage))).filter(Boolean);
+  const dealStatusOptions = Array.from(new Set(deals.map((deal) => deal.status))).filter(Boolean);
+
+  const normalizedLeadSearch = leadFilters.search.trim().toLowerCase();
+  const filteredLeads = leads.filter((lead) => {
+    if (leadFilters.stage !== "all" && lead.stage !== leadFilters.stage) return false;
+    if (leadFilters.status !== "all" && lead.status !== leadFilters.status) return false;
+    if (!normalizedLeadSearch) return true;
+    const haystack = [
+      lead.company_name,
+      lead.contact_name,
+      lead.contact_email,
+      lead.contact_title,
+      lead.source,
+      lead.next_step_summary,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(normalizedLeadSearch);
+  });
+
+  const normalizedDealSearch = dealFilters.search.trim().toLowerCase();
+  const filteredDeals = deals.filter((deal) => {
+    if (dealFilters.stage !== "all" && deal.stage !== dealFilters.stage) return false;
+    if (dealFilters.status !== "all" && deal.status !== dealFilters.status) return false;
+    if (!normalizedDealSearch) return true;
+    const haystack = [
+      deal.deal_name,
+      deal.stage,
+      deal.status,
+      deal.next_step_summary,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(normalizedDealSearch);
+  });
+
+  const openLeadCount = filteredLeads.filter(
+    (lead) => (lead.status || "").toLowerCase() === "open"
+  ).length;
+  const qualifiedLeadCount = filteredLeads.filter((lead) => lead.stage === "Qualified").length;
+  const convertedLeadCount = filteredLeads.filter(
+    (lead) => (lead.status || "").toLowerCase() === "converted"
+  ).length;
+  const leadPipelineValue = filteredLeads.reduce(
+    (sum, lead) => sum + (Number(lead.expected_value) || 0),
+    0
+  );
+
+  const openDealCount = filteredDeals.filter(
+    (deal) => (deal.status || "").toLowerCase() === "open"
+  ).length;
+  const wonDealCount = filteredDeals.filter(
+    (deal) => (deal.status || "").toLowerCase() === "won"
+  ).length;
+  const dealPipelineValue = filteredDeals.reduce(
+    (sum, deal) => sum + (Number(deal.amount) || 0),
+    0
+  );
+  const avgDealProbability =
+    filteredDeals.length
+      ? filteredDeals.reduce((sum, deal) => sum + (Number(deal.probability) || 0), 0) /
+        filteredDeals.length
+      : 0;
 
   const portfolioBulkActions = [
     {
@@ -2762,6 +2837,258 @@ const App = () => {
                           };
                         }
                       )}
+                    />
+                  </Card>
+                </div>
+                <ObjectViewPanel
+                  record={selectedObjectRecord}
+                  objectType={selectedObjectTypeDef}
+                  derivedValues={derivedForSelected}
+                  relationships={relationshipsForSelected}
+                  onAction={actionOptions}
+                />
+              </div>
+            </section>
+          )}
+
+          {activePage === "leads" && (
+            <section className="page active" data-page="leads">
+              <PageHeader
+                title="Leads"
+                description="Capture and advance leads through qualification and proposal."
+              />
+              <div className="kpi-row">
+                <KpiCard label="# Leads" value={filteredLeads.length} />
+                <KpiCard label="Open leads" value={openLeadCount} />
+                <KpiCard label="Qualified" value={qualifiedLeadCount} />
+                <KpiCard label="Converted" value={convertedLeadCount} />
+                <KpiCard label="Pipeline value" value={`$${formatNumber(leadPipelineValue)}`} />
+              </div>
+              <div className="module-grid">
+                <div className="module-main">
+                  <Card className="panel">
+                    <h3>Lead pipeline</h3>
+                    <div className="table-toolbar">
+                      <div className="toolbar-group">
+                        <div className="toolbar-block">
+                          <span>Search</span>
+                          <Input
+                            placeholder="Search leads"
+                            value={leadFilters.search}
+                            onChange={(event) =>
+                              setLeadFilters((prev) => ({ ...prev, search: event.target.value }))
+                            }
+                          />
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Stage</span>
+                          <Select
+                            value={leadFilters.stage}
+                            onValueChange={(value) =>
+                              setLeadFilters((prev) => ({ ...prev, stage: value }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All stages" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              {leadStageOptions.map((stage) => (
+                                <SelectItem key={stage} value={stage}>
+                                  {stage}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Status</span>
+                          <Select
+                            value={leadFilters.status}
+                            onValueChange={(value) =>
+                              setLeadFilters((prev) => ({ ...prev, status: value }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All statuses" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              {leadStatusOptions.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                    <DataTable
+                      columns={[
+                        "Company",
+                        "Stage",
+                        "Status",
+                        "Owner",
+                        "Next step",
+                        "Expected value",
+                        "Last contacted",
+                        "Source",
+                      ]}
+                      rows={filteredLeads.map((lead) => ({
+                        key: lead.lead_id,
+                        Company: lead.company_name,
+                        Stage: lead.stage,
+                        Status: lead.status,
+                        Owner:
+                          teamMemberMap.get(lead.owner_team_member_id)?.name ||
+                          lead.owner_team_member_id ||
+                          "—",
+                        "Next step": lead.next_step_summary || "—",
+                        "Expected value": Number.isFinite(Number(lead.expected_value))
+                          ? `$${formatNumber(Number(lead.expected_value))}`
+                          : "—",
+                        "Last contacted": formatDate(lead.last_contacted_at),
+                        Source: lead.source || "—",
+                        onClick: () =>
+                          handleSelectObject({
+                            page: "leads",
+                            objectType: "lead",
+                            objectId: lead.lead_id,
+                          }),
+                      }))}
+                    />
+                  </Card>
+                </div>
+                <ObjectViewPanel
+                  record={selectedObjectRecord}
+                  objectType={selectedObjectTypeDef}
+                  derivedValues={derivedForSelected}
+                  relationships={relationshipsForSelected}
+                  onAction={actionOptions}
+                />
+              </div>
+            </section>
+          )}
+
+          {activePage === "deals" && (
+            <section className="page active" data-page="deals">
+              <PageHeader
+                title="Deals"
+                description="Track pipeline value and conversion progress."
+              />
+              <div className="kpi-row">
+                <KpiCard label="# Deals" value={filteredDeals.length} />
+                <KpiCard label="Open deals" value={openDealCount} />
+                <KpiCard label="Won deals" value={wonDealCount} />
+                <KpiCard label="Pipeline value" value={`$${formatNumber(dealPipelineValue)}`} />
+                <KpiCard
+                  label="Avg probability"
+                  value={formatPercent(avgDealProbability)}
+                />
+              </div>
+              <div className="module-grid">
+                <div className="module-main">
+                  <Card className="panel">
+                    <h3>Deal pipeline</h3>
+                    <div className="table-toolbar">
+                      <div className="toolbar-group">
+                        <div className="toolbar-block">
+                          <span>Search</span>
+                          <Input
+                            placeholder="Search deals"
+                            value={dealFilters.search}
+                            onChange={(event) =>
+                              setDealFilters((prev) => ({ ...prev, search: event.target.value }))
+                            }
+                          />
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Stage</span>
+                          <Select
+                            value={dealFilters.stage}
+                            onValueChange={(value) =>
+                              setDealFilters((prev) => ({ ...prev, stage: value }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All stages" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              {dealStageOptions.map((stage) => (
+                                <SelectItem key={stage} value={stage}>
+                                  {stage}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Status</span>
+                          <Select
+                            value={dealFilters.status}
+                            onValueChange={(value) =>
+                              setDealFilters((prev) => ({ ...prev, status: value }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All statuses" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              {dealStatusOptions.map((status) => (
+                                <SelectItem key={status} value={status}>
+                                  {status}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                    <DataTable
+                      columns={[
+                        "Deal",
+                        "Stage",
+                        "Status",
+                        "Amount",
+                        "Probability",
+                        "Expected close",
+                        "Customer",
+                        "Lead",
+                        "Next step",
+                      ]}
+                      rows={filteredDeals.map((deal) => {
+                        const accountName = deal.account_id
+                          ? accountMap.get(deal.account_id)?.account_name || "—"
+                          : "—";
+                        const leadName = deal.lead_id
+                          ? leadMap.get(deal.lead_id)?.company_name || "—"
+                          : "—";
+                        return {
+                          key: deal.deal_id,
+                          Deal: deal.deal_name,
+                          Stage: deal.stage,
+                          Status: deal.status,
+                          Amount: Number.isFinite(Number(deal.amount))
+                            ? `$${formatNumber(Number(deal.amount))}`
+                            : "—",
+                          Probability: Number.isFinite(Number(deal.probability))
+                            ? `${Math.round(Number(deal.probability) * 100)}%`
+                            : "—",
+                          "Expected close": formatDate(deal.expected_close_date),
+                          Customer: accountName,
+                          Lead: leadName,
+                          "Next step": deal.next_step_summary || "—",
+                          onClick: () =>
+                            handleSelectObject({
+                              page: "deals",
+                              objectType: "deal",
+                              objectId: deal.deal_id,
+                            }),
+                        };
+                      })}
                     />
                   </Card>
                 </div>

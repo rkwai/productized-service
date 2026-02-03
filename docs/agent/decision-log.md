@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Add Leads and Deals pages to the UI
+- Decision: Added dedicated Leads and Deals pages with filters, KPIs, and object detail panels.
+- Alternatives considered: Fold leads/deals into the Customers page; delay UI until import pipeline exists.
+- Rationale: Makes the new lead/deal lifecycle visible immediately and keeps the navigation aligned with goals.
+- Implications: Global filters are still customer-centric; may need refinement as lead pipeline grows.
+- Follow-ups: Add import flow and next-step automation for leads/deals.
+
 ## 2026-02-03 — Add lead/deal objects without renaming legacy IDs
 - Decision: Added lead/deal objects and lifecycle fields while keeping existing object IDs/field names (client_account, consulting_engagement, renewal_risk_score).
 - Alternatives considered: Rename object types and fields to customer/activation/retention; postpone data model changes until UI refactor.
