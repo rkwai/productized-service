@@ -7,6 +7,7 @@
 - Tests: `npm run test`.
 - Metrics / instrumentation: None.
 - Follow-ups: Refactor underlying data model + seed data to add lead lifecycle objects and import format.
+- Commit: `16c05e4`.
 
 ## 2026-02-03
 - Outcome: Updated the internal launch plan to make refactoring the existing code/design the first step.
