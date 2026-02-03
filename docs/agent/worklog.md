@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Updated the E2E happy-path test to align with the renamed navigation and KPI labels.
+- Why: UI copy changes broke the Playwright selector expectations.
+- Key changes (files/areas): `tests/happy-path.spec.js`.
+- Tests: `npm run test:e2e`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
+## 2026-02-03
 - Outcome: Tuned the decision-engine scoring and mapped recommendations to workflow actions.
 - Why: The “brain” now produces actionable workflows with buttons in Home and Next Steps.
 - Key changes (files/areas): `src/lib/decision-engine.js`, `src/App.jsx`, `public/docs/ontology-map.json`, `docs/ontology-map.json`, `src/data/initial-data.js`, `tests/unit/decision-engine.test.mjs`, `docs/USER_GUIDE.md`, `docs/ARCHITECTURE.md`, `docs/agent/backlog.md`.
