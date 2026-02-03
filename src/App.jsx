@@ -2293,6 +2293,12 @@ const App = () => {
     });
   };
 
+  const marketingFocusLog = useMemo(
+    () => (state?.action_log || []).filter((entry) => entry.action_type === "set_marketing_focus"),
+    [state]
+  );
+  const latestMarketingFocus = marketingFocusLog[0] || null;
+
   const deliveryActionContext =
     selectedObjectType === "milestone"
       ? selectedObjectRecord || {}
@@ -2740,7 +2746,7 @@ const App = () => {
     Action: (
       <div className="table-actions">
         <StatusPill
-          label={segment.spendAction || "Hold spend"}
+          label={`Focus: ${segment.spendAction || "Hold spend"}`}
           tone={getSpendActionTone(segment.spendAction)}
         />
         <Button
@@ -2752,7 +2758,7 @@ const App = () => {
           }}
           disabled={isViewer}
         >
-          Log focus
+          Set focus
         </Button>
       </div>
     ),
@@ -3855,6 +3861,27 @@ const App = () => {
                       <strong>{roiRecommendation.title}</strong>
                     </div>
                     <p>{roiRecommendation.detail}</p>
+                  </div>
+                  <div className="allocation-callout">
+                    <div>
+                      <span className="label">Marketing focus</span>
+                      <strong>
+                        {latestMarketingFocus
+                          ? `${latestMarketingFocus.parameters?.segment || "Segment"} · ${latestMarketingFocus.parameters?.action || "Hold spend"}`
+                          : "No focus logged yet"}
+                      </strong>
+                    </div>
+                    <p>
+                      {latestMarketingFocus
+                        ? `Logged ${formatDate(latestMarketingFocus.run_at)} · LTV:CAC ${
+                            latestMarketingFocus.parameters?.ltv_cac_ratio
+                              ? `${latestMarketingFocus.parameters.ltv_cac_ratio}x`
+                              : "—"
+                          } · Profit share ${
+                            latestMarketingFocus.parameters?.profit_share_pct ?? "—"
+                          }%`
+                        : "Log a focus decision from Profitability by segment."}
+                    </p>
                   </div>
                 </div>
                 <Card className="panel">

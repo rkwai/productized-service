@@ -8,11 +8,11 @@
 - Follow-ups: Move onboarding templates into config for easier edits.
 
 ## 2026-02-03 — Log marketing focus decisions from segment profitability
-- Decision: Added a “Log focus” action on the segment profitability table to record marketing focus decisions.
+- Decision: Added a “Set focus” action on the segment profitability table and surfaced the latest focus on Home.
 - Alternatives considered: Rely on manual notes; add a separate marketing plan module.
 - Rationale: Owners need a lightweight way to translate segment insights into actions.
-- Implications: Action log now includes a custom action type not yet formalized in config.
-- Follow-ups: Add `set_marketing_focus` to config action types.
+- Implications: Marketing focus is a logged action (not a workflow) and does not require config action types.
+- Follow-ups: Consider a richer marketing focus history view if needed.
 
 ## 2026-02-03 — Add customer activation/retention quick actions in portfolio
 - Decision: Added a Quick actions column on the Customers table to launch activation, retention, and data-gap workflows.

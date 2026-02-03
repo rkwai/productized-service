@@ -62,6 +62,7 @@ Use **Profitability by segment** on the Customers page to:
 - Compare LTV:CAC efficiency and payback speed side-by-side.
 - Compare profit share vs CAC share and act on spend deltas.
 - Log a marketing focus decision directly from the segment action button.
+The latest focus decision appears in the Home → Segment ROI section.
 
 The **Spend recommendation** callout on Home summarizes the top segment to fund based on profit share and LTV:CAC.
 

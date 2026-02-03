@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Clarified marketing focus as an action by showing the latest focus in Home’s ROI section.
+- Why: Make the decision visible without treating it as a workflow.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Consider a dedicated marketing focus history view if requested.
+
+## 2026-02-03
 - Outcome: Auto-created onboarding engagement/workstreams/milestones when converting a deal to a customer.
 - Why: Ensure activation milestones appear immediately after conversion without manual setup.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
