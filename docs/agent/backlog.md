@@ -8,7 +8,7 @@
 - [x] Decide the import format + validation rules for Feb 10.
 - [x] Build lead/deal import UI once the format is locked.
 - [x] Confirm secondary KPIs beyond LTV:CAC (activation rate, retention, conversion).
-- [ ] Refactor existing account-portfolio UX/data model to align with lead lifecycle and activation goals.
+- [x] Refactor existing account-portfolio UX/data model to align with lead lifecycle and activation goals.
 - [x] Update ontology config + seed data to include Lead/Customer/Deal objects and lifecycle stages.
 
 ## P1 (soon)

@@ -99,6 +99,21 @@ const getFreshnessTone = (value) => {
   if (value <= 30) return "status-pill--warn";
   return "status-pill--bad";
 };
+const getLifecycleTone = (value) => {
+  const normalized = String(value || "").toLowerCase();
+  if (!normalized) return "status-pill--neutral";
+  if (normalized === "retained") return "status-pill--good";
+  if (normalized === "activated") return "status-pill--good";
+  if (normalized === "onboarded") return "status-pill--warn";
+  return "status-pill--neutral";
+};
+const getActivationTone = (value) => {
+  const normalized = String(value || "").toLowerCase();
+  if (!normalized) return "status-pill--neutral";
+  if (normalized.includes("risk")) return "status-pill--bad";
+  if (normalized.includes("track")) return "status-pill--good";
+  return "status-pill--warn";
+};
 const StatusPill = ({ label, tone }) => <span className={`status-pill ${tone}`}>{label}</span>;
 const PORTFOLIO_COLUMNS = [
   "Select",
@@ -106,6 +121,8 @@ const PORTFOLIO_COLUMNS = [
   "Industry",
   "Region",
   "Segment",
+  "Lifecycle stage",
+  "Activation status",
   "Health",
   "Retention risk",
   "Churn risk",
@@ -122,23 +139,44 @@ const PORTFOLIO_VIEW_PRESETS = [
   {
     name: "Default",
     groupBy: "none",
-    filters: { health: "all", risk: "all", missing: "all" },
+    filters: { health: "all", risk: "all", missing: "all", lifecycle: "all", activation: "all" },
     columns: PORTFOLIO_COLUMNS,
   },
   {
     name: "High Risk Focus",
     groupBy: "region",
-    filters: { health: "all", risk: "high", missing: "all" },
+    filters: { health: "all", risk: "high", missing: "all", lifecycle: "all", activation: "all" },
     columns: PORTFOLIO_COLUMNS.filter((column) =>
-      ["Select", "Customer", "Region", "Health", "Retention risk", "Churn risk", "Data freshness", "LTV at risk"].includes(column)
+      [
+        "Select",
+        "Customer",
+        "Region",
+        "Lifecycle stage",
+        "Activation status",
+        "Health",
+        "Retention risk",
+        "Churn risk",
+        "Data freshness",
+        "LTV at risk",
+      ].includes(column)
     ),
   },
   {
     name: "Data Gaps",
     groupBy: "segment",
-    filters: { health: "all", risk: "all", missing: "gaps" },
+    filters: { health: "all", risk: "all", missing: "gaps", lifecycle: "all", activation: "all" },
     columns: PORTFOLIO_COLUMNS.filter((column) =>
-      ["Select", "Customer", "Segment", "Region", "Missing data", "Data freshness", "Health"].includes(column)
+      [
+        "Select",
+        "Customer",
+        "Segment",
+        "Region",
+        "Lifecycle stage",
+        "Activation status",
+        "Missing data",
+        "Data freshness",
+        "Health",
+      ].includes(column)
     ),
   },
 ];
@@ -1579,7 +1617,7 @@ const App = () => {
     if (!view) return;
     setPortfolioView(view.name);
     setPortfolioGroupBy(view.groupBy);
-    setPortfolioFilters(view.filters);
+    setPortfolioFilters({ ...PORTFOLIO_VIEW_PRESETS[0].filters, ...view.filters });
     setPortfolioColumns(view.columns);
   };
 
@@ -1863,6 +1901,8 @@ const App = () => {
     const segmentValue =
       getDerived(state, "client_account", account.account_id, "segment_tag")?.value ??
       account.segment_tag;
+    const lifecycleStage = account.lifecycle_stage || "";
+    const activationStatus = account.activation_status || "";
 
     return {
       account,
@@ -1880,6 +1920,8 @@ const App = () => {
       avgMonthlyRevenue,
       grossMarginRate,
       segmentValue,
+      lifecycleStage,
+      activationStatus,
     };
   });
 
@@ -1890,6 +1932,7 @@ const App = () => {
     const accountMilestones = milestonesByAccountId.get(account.account_id) ?? [];
     const atRiskMilestoneCount = accountMilestones.filter(isMilestoneAtRisk).length;
     const highRiskCount = highRisksByAccountId.get(account.account_id)?.length ?? 0;
+    const activationStatus = account.activation_status || "";
     return {
       account,
       health,
@@ -1897,15 +1940,17 @@ const App = () => {
       segment,
       atRiskMilestoneCount,
       highRiskCount,
+      activationStatus,
     };
   });
 
   const attentionCandidates = accountInsights
     .filter(
-      ({ risk, atRiskMilestoneCount, highRiskCount }) =>
+      ({ risk, atRiskMilestoneCount, highRiskCount, activationStatus }) =>
         (risk?.value || 0) >= RENEWAL_RISK_THRESHOLD ||
         atRiskMilestoneCount > 0 ||
-        highRiskCount > 0
+        highRiskCount > 0 ||
+        String(activationStatus || "").toLowerCase() === "at risk"
     )
     .sort((a, b) => (b.risk?.value || 0) - (a.risk?.value || 0));
 
@@ -1993,6 +2038,8 @@ const App = () => {
   const segmentBreakdown = buildBreakdown(accountSignals, (item) => item.segmentValue);
 
   const regionBreakdown = buildBreakdown(accountSignals, (item) => item.account.region);
+
+  const lifecycleBreakdown = buildBreakdown(accountSignals, (item) => item.lifecycleStage);
 
   const LTV_CAC_TARGET = 3;
   const SPEND_DELTA_THRESHOLD = 5;
@@ -2137,6 +2184,24 @@ const App = () => {
       <div className="delta-cell">
         <StatusPill label={region.avgRiskScore} tone={getRiskTone(region.avgRiskScore)} />
         <span>{formatDelta(region.riskDelta)}</span>
+      </div>
+    ),
+  }));
+
+  const lifecycleCohortRows = lifecycleBreakdown.map((stage) => ({
+    key: `lifecycle-${stage.key}`,
+    Cohort: stage.key,
+    Customers: stage.count,
+    "Avg health": (
+      <div className="delta-cell">
+        <StatusPill label={stage.avgHealthScore} tone={getHealthTone(stage.avgHealthScore)} />
+        <span>{formatDelta(stage.healthDelta)}</span>
+      </div>
+    ),
+    "Avg risk": (
+      <div className="delta-cell">
+        <StatusPill label={stage.avgRiskScore} tone={getRiskTone(stage.avgRiskScore)} />
+        <span>{formatDelta(stage.riskDelta)}</span>
       </div>
     ),
   }));
@@ -2440,6 +2505,12 @@ const App = () => {
     accounts: accounts.map((account) => account.account_name),
     engagements: engagements.map((engagement) => engagement.engagement_name),
   };
+  const lifecycleStageFilters = Array.from(
+    new Set(accounts.map((account) => account.lifecycle_stage || "Unassigned"))
+  ).filter(Boolean);
+  const activationStatusFilters = Array.from(
+    new Set(accounts.map((account) => account.activation_status || "Unassigned"))
+  ).filter(Boolean);
 
   const portfolioFilterOptions = {
     health: [
@@ -2453,6 +2524,14 @@ const App = () => {
       { label: "Low", value: "low" },
       { label: "Medium", value: "medium" },
       { label: "High", value: "high" },
+    ],
+    lifecycle: [
+      { label: "All", value: "all" },
+      ...lifecycleStageFilters.map((value) => ({ label: value, value })),
+    ],
+    activation: [
+      { label: "All", value: "all" },
+      ...activationStatusFilters.map((value) => ({ label: value, value })),
     ],
     missing: [
       { label: "All", value: "all" },
@@ -2581,6 +2660,14 @@ const App = () => {
     if (portfolioFilters.risk !== "all" && portfolioRiskTier(item.riskValue) !== portfolioFilters.risk) {
       return false;
     }
+    const lifecycleValue = item.lifecycleStage || "Unassigned";
+    if (portfolioFilters.lifecycle !== "all" && lifecycleValue !== portfolioFilters.lifecycle) {
+      return false;
+    }
+    const activationValue = item.activationStatus || "Unassigned";
+    if (portfolioFilters.activation !== "all" && activationValue !== portfolioFilters.activation) {
+      return false;
+    }
     const missingTier = item.missingFields.length ? "gaps" : "complete";
     if (portfolioFilters.missing !== "all" && missingTier !== portfolioFilters.missing) {
       return false;
@@ -2640,6 +2727,8 @@ const App = () => {
           Industry: "",
           Region: "",
           Segment: "",
+          "Lifecycle stage": "",
+          "Activation status": "",
           Health: "",
           "Retention risk": "",
           "Churn risk": "",
@@ -2662,6 +2751,8 @@ const App = () => {
       missingFields,
       ltvAtRisk,
       segmentValue,
+      lifecycleStage,
+      activationStatus,
       cacValue,
       ltvCacRatio,
       paybackMonths,
@@ -2683,6 +2774,18 @@ const App = () => {
       Industry: account.industry,
       Region: account.region,
       Segment: segmentValue,
+      "Lifecycle stage": (
+        <StatusPill
+          label={lifecycleStage || "—"}
+          tone={getLifecycleTone(lifecycleStage)}
+        />
+      ),
+      "Activation status": (
+        <StatusPill
+          label={activationStatus || "—"}
+          tone={getActivationTone(activationStatus)}
+        />
+      ),
       Health: <StatusPill label={healthValue ?? "—"} tone={getHealthTone(healthValue)} />,
       "Retention risk": <StatusPill label={riskValue ?? "—"} tone={getRiskTone(riskValue)} />,
       "Churn risk": <StatusPill label={churnValue ?? "—"} tone={getRiskTone(churnValue)} />,
@@ -3154,6 +3257,7 @@ const App = () => {
                       columns={[
                         "Customer",
                         "Health",
+                        "Activation status",
                         "Retention risk",
                         "Alerts",
                         "Segment",
@@ -3161,13 +3265,20 @@ const App = () => {
                         "Quick actions",
                       ]}
                       rows={attentionAccounts.map(
-                        ({ account, health, risk, segment, atRiskMilestoneCount, highRiskCount }) => {
+                        ({ account, health, risk, segment, atRiskMilestoneCount, highRiskCount, activationStatus }) => {
                           const renewalRiskValue = risk?.value ?? account.renewal_risk_score;
                           const alertBadges = [];
                           if (renewalRiskValue >= RENEWAL_RISK_THRESHOLD) {
                             alertBadges.push(
                               <Badge key="renewal" className="alert-badge" variant="secondary">
                                 Retention risk
+                              </Badge>
+                            );
+                          }
+                          if (String(activationStatus || "").toLowerCase() === "at risk") {
+                            alertBadges.push(
+                              <Badge key="activation" className="alert-badge danger" variant="outline">
+                                Activation at risk
                               </Badge>
                             );
                           }
@@ -3189,6 +3300,12 @@ const App = () => {
                             key: account.account_id,
                             Customer: account.account_name,
                             Health: health?.value ?? account.health_score,
+                            "Activation status": (
+                              <StatusPill
+                                label={activationStatus || "—"}
+                                tone={getActivationTone(activationStatus)}
+                              />
+                            ),
                             "Retention risk": renewalRiskValue,
                             Alerts: <div className="alert-badges">{alertBadges}</div>,
                             Segment: segment?.value ?? account.segment_tag,
@@ -3523,7 +3640,7 @@ const App = () => {
               </div>
               <Card className="panel">
                 <h3>Cohort metrics</h3>
-                <p className="help-text">Segment and region cohorts with deltas vs customer averages.</p>
+                <p className="help-text">Segment, region, and lifecycle cohorts with deltas vs customer averages.</p>
                 <div className="cohort-grid">
                   <div>
                     <h4>Segment cohorts</h4>
@@ -3532,6 +3649,10 @@ const App = () => {
                   <div>
                     <h4>Regional cohorts</h4>
                     <DataTable columns={["Cohort", "Customers", "Avg health", "Avg risk"]} rows={regionCohortRows} />
+                  </div>
+                  <div>
+                    <h4>Lifecycle cohorts</h4>
+                    <DataTable columns={["Cohort", "Customers", "Avg health", "Avg risk"]} rows={lifecycleCohortRows} />
                   </div>
                 </div>
               </Card>
@@ -3628,6 +3749,42 @@ const App = () => {
                               <SelectItem value="none">None</SelectItem>
                               <SelectItem value="region">Region</SelectItem>
                               <SelectItem value="segment">Segment</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Lifecycle</span>
+                          <Select
+                            value={portfolioFilters.lifecycle}
+                            onValueChange={(value) => handlePortfolioFilterChange("lifecycle", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All stages" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {portfolioFilterOptions.lifecycle.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="toolbar-block">
+                          <span>Activation</span>
+                          <Select
+                            value={portfolioFilters.activation}
+                            onValueChange={(value) => handlePortfolioFilterChange("activation", value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All statuses" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {portfolioFilterOptions.activation.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>

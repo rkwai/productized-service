@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Surface lifecycle stage + activation status in the Customers view
+- Decision: Added lifecycle stage and activation status to the customer portfolio table, filters, and cohorts; flagged activation-at-risk in attention alerts.
+- Alternatives considered: Keep lifecycle data only in settings or add a separate activation pipeline page.
+- Rationale: Makes activation progress visible in the primary customer view without expanding navigation.
+- Implications: Portfolio filters now include lifecycle/activation; data must stay consistent with lifecycle definitions.
+- Follow-ups: Evaluate if activation-stage KPIs should be elevated to the executive summary.
+
 ## 2026-02-03 — Lock the v1 data model + analytics definitions
 - Decision: Documented the v1 schema (required fields + lifecycle values) and codified KPI formulas; updated ontology configs to reflect derived revenue/health metrics.
 - Alternatives considered: Keep definitions implicit in code only; delay until after the “brain” is implemented.

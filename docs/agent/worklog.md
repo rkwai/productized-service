@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Refactored the Customers (portfolio) view to surface lifecycle stage and activation status alongside health and ROI.
+- Why: Align the account-focused UX with the lead → activation lifecycle and make activation progress visible.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`, `docs/agent/backlog.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Consider adding activation-stage metrics to the executive summary once the decision engine lands.
+
+## 2026-02-03
 - Outcome: Locked the v1 data model and analytics definitions for the internal launch.
 - Why: Make the schema and KPI formulas explicit before finishing the “brain” and UX polish.
 - Key changes (files/areas): `docs/data-model.md`, `docs/agent/metrics.md`, `public/docs/ontology-map.json`, `docs/ontology-map.json`, `src/data/initial-data.js`, `docs/agent/backlog.md`.
