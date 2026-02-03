@@ -1348,6 +1348,71 @@ const App = () => {
     }
   };
 
+  const handleConvertLeadToDeal = (lead) => {
+    if (!lead) return;
+    let createdId = "";
+    applyUpdate((next) => {
+      const dealType = next.config.semantic_layer.object_types.find((type) => type.id === "deal");
+      if (!dealType) return;
+      if (!next.instances.deal) {
+        next.instances.deal = [];
+      }
+      const newDeal = createEmptyRecord(dealType);
+      const closeDate = new Date();
+      closeDate.setDate(closeDate.getDate() + 30);
+      newDeal.deal_name = lead.company_name ? `${lead.company_name} Opportunity` : "New deal";
+      newDeal.lead_id = lead.lead_id || "";
+      newDeal.stage = "Discovery";
+      newDeal.status = "Open";
+      newDeal.amount = lead.expected_value || "";
+      newDeal.probability = lead.expected_value ? 0.4 : "";
+      newDeal.expected_close_date = closeDate.toISOString().split("T")[0];
+      newDeal.next_step_summary = lead.next_step_summary || "Define close plan";
+      next.instances.deal.push(newDeal);
+      createdId = newDeal.deal_id;
+      generateAuditEntry({ action: "create", object_type: "deal", object_id: createdId }, next);
+
+      const leadIndex = (next.instances.lead || []).findIndex((item) => item.lead_id === lead.lead_id);
+      if (leadIndex !== -1) {
+        if (!next.instances.lead[leadIndex].status) {
+          next.instances.lead[leadIndex].status = "Open";
+        }
+        if (!next.instances.lead[leadIndex].stage || next.instances.lead[leadIndex].stage === "Lead") {
+          next.instances.lead[leadIndex].stage = "Qualified";
+        }
+        generateAuditEntry(
+          {
+            action: "update",
+            object_type: "lead",
+            object_id: next.instances.lead[leadIndex].lead_id,
+          },
+          next
+        );
+      }
+
+      if (!next.links) {
+        next.links = [];
+      }
+      if (lead.lead_id && createdId) {
+        const linkKey = `lead_has_deal|${lead.lead_id}|${createdId}`;
+        const linkExists = next.links.some(
+          (link) => `${link.link_type}|${link.from_id}|${link.to_id}` === linkKey
+        );
+        if (!linkExists) {
+          next.links.push({
+            id: `lnk_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            link_type: "lead_has_deal",
+            from_id: lead.lead_id,
+            to_id: createdId,
+          });
+        }
+      }
+    });
+    if (createdId) {
+      handleSelectObject({ page: "deals", objectType: "deal", objectId: createdId });
+    }
+  };
+
   const handleActionSubmit = (action, formData) => {
     applyUpdate((next) => {
       next.action_log.unshift({
@@ -2524,6 +2589,13 @@ const App = () => {
   const teamMemberMap = new Map(teamMembers.map((member) => [member.team_member_id, member]));
   const accountMap = new Map(accounts.map((account) => [account.account_id, account]));
   const leadMap = new Map(leads.map((lead) => [lead.lead_id, lead]));
+  const dealsByLeadId = deals.reduce((map, deal) => {
+    if (!deal.lead_id) return map;
+    const existing = map.get(deal.lead_id) || [];
+    existing.push(deal);
+    map.set(deal.lead_id, existing);
+    return map;
+  }, new Map());
   const workstreamMap = new Map(workstreams.map((workstream) => [workstream.workstream_id, workstream]));
   const today = new Date();
 
@@ -3769,51 +3841,78 @@ const App = () => {
                         "Expected value",
                         "Last contacted",
                         "Source",
+                        "Quick actions",
                       ]}
-                      rows={leadCaptureSignals.map(({ lead, missingFields, isStale }) => ({
-                        key: lead.lead_id,
-                        className: missingFields.length || isStale ? "row-highlight-warn" : "",
-                        Company: lead.company_name,
-                        Stage: (
-                          <StatusPill
-                            label={lead.stage || "—"}
-                            tone={getToneByValue(lead.stage, LEAD_STAGE_COLORS)}
-                          />
-                        ),
-                        Status: (
-                          <StatusPill
-                            label={lead.status || "—"}
-                            tone={getToneByValue(lead.status, LEAD_STATUS_COLORS)}
-                          />
-                        ),
-                        "Capture gaps": missingFields.length ? (
-                          <div className="missing-data">
+                      rows={leadCaptureSignals.map(({ lead, missingFields, isStale }) => {
+                        const existingDeal = dealsByLeadId.get(lead.lead_id)?.[0];
+                        return {
+                          key: lead.lead_id,
+                          className: missingFields.length || isStale ? "row-highlight-warn" : "",
+                          Company: lead.company_name,
+                          Stage: (
                             <StatusPill
-                              label={`${missingFields.length} gaps`}
-                              tone="status-pill--warn"
+                              label={lead.stage || "—"}
+                              tone={getToneByValue(lead.stage, LEAD_STAGE_COLORS)}
                             />
-                            <span>{missingFields.slice(0, 2).join(", ")}</span>
-                          </div>
-                        ) : (
-                          <StatusPill label="Complete" tone="status-pill--good" />
-                        ),
-                        Owner:
-                          teamMemberMap.get(lead.owner_team_member_id)?.name ||
-                          lead.owner_team_member_id ||
-                          "—",
-                        "Next step": lead.next_step_summary || "—",
-                        "Expected value": Number.isFinite(Number(lead.expected_value))
-                          ? `$${formatNumber(Number(lead.expected_value))}`
-                          : "—",
-                        "Last contacted": formatDate(lead.last_contacted_at),
-                        Source: lead.source || "—",
-                        onClick: () =>
-                          handleSelectObject({
-                            page: "leads",
-                            objectType: "lead",
-                            objectId: lead.lead_id,
-                          }),
-                      }))}
+                          ),
+                          Status: (
+                            <StatusPill
+                              label={lead.status || "—"}
+                              tone={getToneByValue(lead.status, LEAD_STATUS_COLORS)}
+                            />
+                          ),
+                          "Capture gaps": missingFields.length ? (
+                            <div className="missing-data">
+                              <StatusPill
+                                label={`${missingFields.length} gaps`}
+                                tone="status-pill--warn"
+                              />
+                              <span>{missingFields.slice(0, 2).join(", ")}</span>
+                            </div>
+                          ) : (
+                            <StatusPill label="Complete" tone="status-pill--good" />
+                          ),
+                          Owner:
+                            teamMemberMap.get(lead.owner_team_member_id)?.name ||
+                            lead.owner_team_member_id ||
+                            "—",
+                          "Next step": lead.next_step_summary || "—",
+                          "Expected value": Number.isFinite(Number(lead.expected_value))
+                            ? `$${formatNumber(Number(lead.expected_value))}`
+                            : "—",
+                          "Last contacted": formatDate(lead.last_contacted_at),
+                          Source: lead.source || "—",
+                          "Quick actions": (
+                            <div className="table-actions">
+                              <Button
+                                size="sm"
+                                variant={existingDeal ? "outline" : "secondary"}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  if (existingDeal) {
+                                    handleSelectObject({
+                                      page: "deals",
+                                      objectType: "deal",
+                                      objectId: existingDeal.deal_id,
+                                    });
+                                  } else {
+                                    handleConvertLeadToDeal(lead);
+                                  }
+                                }}
+                                disabled={isViewer}
+                              >
+                                {existingDeal ? "View deal" : "Create deal"}
+                              </Button>
+                            </div>
+                          ),
+                          onClick: () =>
+                            handleSelectObject({
+                              page: "leads",
+                              objectType: "lead",
+                              objectId: lead.lead_id,
+                            }),
+                        };
+                      })}
                     />
                   </Card>
                 </div>

@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Add lead → deal conversion action in pipeline
+- Decision: Added a Create/View deal quick action on the Leads page that auto-generates a linked deal record.
+- Alternatives considered: Require conversion from Settings; rely on manual deal creation without lead linkage.
+- Rationale: Speed up conversion workflow by reducing context switching and ensuring links are created.
+- Implications: Auto-filled deal fields may need later edits; duplicate prevention relies on existing lead → deal lookup.
+- Follow-ups: Add deal → customer conversion and activation kickoff actions.
+
 ## 2026-02-03 — Surface lead capture hygiene signals in the pipeline
 - Decision: Added capture-gap KPIs/badges, stage/status pills, and a lead quick-edit panel to make incomplete leads visible and fixable in-line.
 - Alternatives considered: Keep lead table minimal and rely on the detail panel for data issues; add a separate “lead hygiene” page.

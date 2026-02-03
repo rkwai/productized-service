@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Added a lead → deal conversion action with auto-filled deal fields and quick “view deal” buttons from the lead pipeline.
+- Why: ICP needs to turn qualified leads into opportunities without detouring to Settings.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Add deal → customer conversion and activation kickoff actions.
+
+## 2026-02-03
 - Outcome: Highlighted lead capture hygiene with KPIs, capture-gap badges, warn-row styling, and a lead quick-edit panel; added stage/status pills for leads and deals.
 - Why: As an ICP, I needed to immediately see which leads were incomplete or stale before worrying about pipeline value.
 - Key changes (files/areas): `src/App.jsx`, `src/index.css`, `docs/USER_GUIDE.md`.
