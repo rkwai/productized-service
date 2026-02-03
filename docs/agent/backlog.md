@@ -8,7 +8,7 @@
 - [ ] Add usage instrumentation for exec-brief views and copy events.
 
 ## P2 (later)
-- [ ]
+- [ ] Package north-star-review skill into a distributable `.skill` if needed.
 
 ## Parking lot
-- [ ]
+- [ ] Verify the global `north-star-review` skill shows up in another repo if needed.
