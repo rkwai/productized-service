@@ -15,6 +15,7 @@ import {
   toTitle,
   generateAuditEntry,
 } from "@/lib/dashboard";
+import { buildExecutiveBrief } from "@/lib/executive-brief";
 import { clearState } from "@/lib/storage";
 import { NAV_ITEMS, readRouteFromHash, resolveActivePage, toHashHref } from "@/lib/routing.mjs";
 import { Badge } from "@/components/ui/badge";
@@ -1876,6 +1877,21 @@ const App = () => {
 
   const overdueInvoices = invoices.filter((invoice) => invoice.status === "Overdue").length;
 
+  const executiveBrief = buildExecutiveBrief({
+    portfolioLtvCacRatio,
+    avgCacPaybackMonths,
+    roiCoveragePct,
+    mostProfitableSegment,
+    bestRoiSegment,
+    totalLtvAtRisk,
+    pipelineRiskExposure,
+    accountsAboveRiskThreshold,
+    atRiskMilestones,
+    openHighRisks,
+    freshAccounts,
+    totalAccounts: filteredAccounts.length,
+  });
+
   const teamMemberMap = new Map(teamMembers.map((member) => [member.team_member_id, member]));
   const workstreamMap = new Map(workstreams.map((workstream) => [workstream.workstream_id, workstream]));
   const today = new Date();
@@ -2432,6 +2448,38 @@ const App = () => {
                 }
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
+              <Card className="panel executive-brief">
+                <div className="executive-brief-header">
+                  <div>
+                    <h3>Executive value brief</h3>
+                    <p>Board-ready summary of unit economics, exposure, and delivery focus.</p>
+                  </div>
+                  <Badge variant="secondary">Auto-generated</Badge>
+                </div>
+                <div className="summary-grid compact">
+                  {executiveBrief.highlights.map((highlight) => (
+                    <div key={highlight.label} className="summary-tile">
+                      <span className="label">{highlight.label}</span>
+                      <strong>{highlight.value}</strong>
+                      {highlight.helper ? <span className="helper">{highlight.helper}</span> : null}
+                    </div>
+                  ))}
+                </div>
+                <div className="executive-brief-footer">
+                  <div>
+                    <span className="label">Decisions this week</span>
+                    <ul>
+                      {executiveBrief.decisions.map((decision) => (
+                        <li key={decision}>{decision}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <span className="label">Data coverage</span>
+                    <p>{executiveBrief.coverage}</p>
+                  </div>
+                </div>
+              </Card>
               <div className="kpi-groups">
                 <div className="kpi-group">
                   <div className="kpi-group-header">

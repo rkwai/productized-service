@@ -414,6 +414,72 @@ body {
   color: var(--muted-text);
 }
 
+.executive-brief {
+  display: grid;
+  gap: var(--space-2);
+  border-color: rgba(91, 141, 255, 0.3);
+  background:
+    linear-gradient(135deg, rgba(91, 141, 255, 0.14), rgba(42, 160, 109, 0.08)),
+    var(--card-surface);
+}
+
+.executive-brief-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.executive-brief-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.executive-brief-header p {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: 0.82rem;
+}
+
+.executive-brief .summary-tile {
+  background: rgba(8, 12, 24, 0.6);
+}
+
+.executive-brief .summary-tile .helper {
+  color: var(--muted-text);
+  font-size: 0.74rem;
+}
+
+.executive-brief-footer {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.executive-brief-footer .label {
+  display: block;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted-text);
+  margin-bottom: 0.4rem;
+}
+
+.executive-brief-footer ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.executive-brief-footer p {
+  margin: 0;
+  color: var(--muted-text);
+  font-size: 0.82rem;
+}
+
 .trend-indicator {
   display: inline-flex;
   align-items: center;
