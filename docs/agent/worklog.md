@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Updated the unit test runner to execute every file in `tests/unit`.
+- Why: `node tests/unit/*.mjs` only ran the first file, hiding later test failures.
+- Key changes (files/areas): `tests/unit/run.mjs`, `package.json`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
+## 2026-02-03
 - Outcome: Added lead/deal import flow in Settings with CSV/JSON parsing, validation warnings, and link creation.
 - Why: Enable fast data ingestion for lead/deal pipelines ahead of the internal launch.
 - Key changes (files/areas): `src/App.jsx`, `src/lib/importer.js`, `docs/USER_GUIDE.md`, `tests/unit/importer.test.mjs`.

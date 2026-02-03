@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Add a simple unit test runner script
+- Decision: Added a lightweight `tests/unit/run.mjs` runner and updated the npm script to use it.
+- Alternatives considered: Keep shell globbing (`node tests/unit/*.mjs`) or adopt a test framework.
+- Rationale: Shell globbing passes only the first file to Node; a tiny runner executes all unit tests without new dependencies.
+- Implications: The runner is custom and should be updated if test organization changes.
+- Follow-ups: Consider migrating to a standard test runner if unit tests grow.
+
 ## 2026-02-03 — Implement local lead/deal import flow with schema-aware parsing
 - Decision: Added a local CSV/JSON import flow for leads and deals with alias mapping, validation warnings, and link creation when IDs resolve.
 - Alternatives considered: Add a full mapping UI or third-party CSV parser; defer imports until integrations exist.

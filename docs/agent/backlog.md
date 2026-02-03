@@ -15,7 +15,7 @@
 - [ ] Add copy/export action for the executive value brief (board-ready readout).
 - [ ] Add usage instrumentation for exec-brief views and copy events.
 - [ ] Define sprint goals cadence and critical-path dependencies.
-- [ ] Update unit test runner to execute all files in `tests/unit`.
+- [x] Update unit test runner to execute all files in `tests/unit`.
 - [ ] Add import preview/mapping UX (field mapping + error surfacing).
 
 ## P2 (later)

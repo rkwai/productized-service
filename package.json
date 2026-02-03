@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "npm run test:unit",
-    "test:unit": "node tests/unit/*.mjs",
+    "test:unit": "node tests/unit/run.mjs",
     "test:e2e": "playwright test",
     "test:all": "npm run test:unit && npm run test:e2e"
   },
