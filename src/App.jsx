@@ -15,6 +15,7 @@ import {
   toTitle,
   generateAuditEntry,
 } from "@/lib/dashboard";
+import { buildDecisionEngine } from "@/lib/decision-engine";
 import {
   buildAliasLookup,
   buildNormalizedLookup,
@@ -64,6 +65,7 @@ const useHashRoute = () => {
 
 const formatNumber = (value) =>
   Number.isFinite(value) ? value.toLocaleString() : value ?? "—";
+const formatCurrency = (value) => (Number.isFinite(value) ? `$${formatNumber(value)}` : "—");
 const formatDelta = (value) => {
   if (!Number.isFinite(value)) return "—";
   const rounded = Math.round(value);
@@ -2609,6 +2611,18 @@ const App = () => {
         filteredDeals.length
       : 0;
 
+  const getDerivedValue = (objectType, objectId, field) =>
+    getDerived(state, objectType, objectId, field)?.value ?? null;
+
+  const decisionEngine = buildDecisionEngine({
+    leads,
+    deals,
+    accounts: filteredAccounts,
+    getDerivedValue,
+  });
+  const focusItem = decisionEngine.focus;
+  const nextSteps = decisionEngine.nextSteps;
+
   const portfolioBulkActions = [
     {
       id: "assign_owner",
@@ -3052,6 +3066,59 @@ const App = () => {
                     <p>{executiveBrief.coverage}</p>
                   </div>
                 </div>
+              </Card>
+              <Card className="panel">
+                <div className="panel-header">
+                  <div>
+                    <h3>Priority focus</h3>
+                    <p>Most valuable next step based on pipeline value and activation risk.</p>
+                  </div>
+                  <Badge variant="secondary">Decision engine</Badge>
+                </div>
+                {focusItem ? (
+                  <div className="summary-grid compact">
+                    <div className="summary-tile">
+                      <span className="label">Focus now</span>
+                      <strong>{focusItem.title}</strong>
+                      <span className="helper">{focusItem.category}</span>
+                    </div>
+                    <div className="summary-tile">
+                      <span className="label">Suggested next step</span>
+                      <strong>{focusItem.action}</strong>
+                      <span className="helper">{focusItem.reason}</span>
+                    </div>
+                    <div className="summary-tile">
+                      <span className="label">Value at stake</span>
+                      <strong>{formatCurrency(focusItem.valueAtStake)}</strong>
+                      <span className="helper">Priority score {formatNumber(focusItem.score)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="help-text">No priority focus yet. Add leads, deals, or customers to get started.</p>
+                )}
+                {nextSteps.length ? (
+                  <DataTable
+                    columns={["Item", "Type", "Value at stake", "Next step"]}
+                    rows={nextSteps.map((step) => ({
+                      key: `${step.objectType}-${step.objectId}`,
+                      Item: step.title,
+                      Type: step.category,
+                      "Value at stake": formatCurrency(step.valueAtStake),
+                      "Next step": step.action,
+                      onClick: () =>
+                        handleSelectObject({
+                          page:
+                            step.objectType === "lead"
+                              ? "leads"
+                              : step.objectType === "deal"
+                                ? "deals"
+                                : "portfolio",
+                          objectType: step.objectType,
+                          objectId: step.objectId,
+                        }),
+                    }))}
+                  />
+                ) : null}
               </Card>
               <div className="kpi-groups">
                 <div className="kpi-group">
@@ -4678,6 +4745,40 @@ const App = () => {
                 <KpiCard label="Critical blockers" value={criticalBlockerCount} />
                 <KpiCard label="Recovery playbooks" value={recoveryQueueCount} />
               </div>
+              <Card className="panel">
+                <div className="panel-header">
+                  <div>
+                    <h3>Owner focus queue</h3>
+                    <p>Top recommended actions across pipeline, activation, and retention.</p>
+                  </div>
+                  <Badge variant="secondary">Auto-ranked</Badge>
+                </div>
+                {nextSteps.length ? (
+                  <DataTable
+                    columns={["Item", "Type", "Value at stake", "Suggested action"]}
+                    rows={nextSteps.map((step) => ({
+                      key: `focus-${step.objectType}-${step.objectId}`,
+                      Item: step.title,
+                      Type: step.category,
+                      "Value at stake": formatCurrency(step.valueAtStake),
+                      "Suggested action": step.action,
+                      onClick: () =>
+                        handleSelectObject({
+                          page:
+                            step.objectType === "lead"
+                              ? "leads"
+                              : step.objectType === "deal"
+                                ? "deals"
+                                : "portfolio",
+                          objectType: step.objectType,
+                          objectId: step.objectId,
+                        }),
+                    }))}
+                  />
+                ) : (
+                  <p className="help-text">No recommendations yet. Add pipeline data to generate next steps.</p>
+                )}
+              </Card>
               <div className="module-grid">
                 <div className="module-main">
                   {actionQueues.map((queue) => (

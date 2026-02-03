@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Add a decision engine for priority focus + next steps
+- Decision: Implemented a lightweight decision engine that ranks lead, deal, and customer actions by value and urgency.
+- Alternatives considered: Hard-code focus in the UI or wait for the full automation layer.
+- Rationale: Provides a tangible “brain” for the internal launch without adding dependencies.
+- Implications: Scoring heuristics may need calibration and should eventually map to real workflow actions.
+- Follow-ups: Tune weights and connect suggestions to action types.
+
 ## 2026-02-03 — Surface lifecycle stage + activation status in the Customers view
 - Decision: Added lifecycle stage and activation status to the customer portfolio table, filters, and cohorts; flagged activation-at-risk in attention alerts.
 - Alternatives considered: Keep lifecycle data only in settings or add a separate activation pipeline page.

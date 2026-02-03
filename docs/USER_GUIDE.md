@@ -17,7 +17,7 @@ npm run dev
 Use the role selector in the header to switch roles.
 
 ## Navigating the cockpit
-- **Home / Owner Summary**: Owner priorities (LTV:CAC, profit leader, LTV at risk), segment ROI, spend alignment, and attention customers.
+- **Home / Owner Summary**: Owner priorities (LTV:CAC, profit leader, LTV at risk), priority focus, segment ROI, spend alignment, and attention customers.
 - **Leads**: Lead pipeline with stages, next steps, and expected value.
 - **Deals**: Opportunity pipeline with conversion stages, expected close dates, and pipeline value.
 - **Customers**: Customer list with lifecycle stage, activation status, health, LTV:CAC, and profitability/spend alignment signals by segment.
@@ -27,7 +27,7 @@ Use the role selector in the header to switch roles.
 - **Retention & Risks**: Central risk log with severity/impact insights.
 - **Revenue & Retention**: Retention posture and overdue invoices.
 - **Operations**: Operating cadence, decisions, and accountability.
-- **Next Steps / Inbox**: Run workflows and track action logs.
+- **Next Steps / Inbox**: Auto-ranked focus queue plus workflow runs and action logs.
 - **Data Model**: View the canonical ontology configuration.
 - **Settings**: Update config metadata, instance data, and audit history.
 

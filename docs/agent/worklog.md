@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Implemented the decision engine to rank next steps and surface a priority focus for owners.
+- Why: The internal launch needs a “brain” that highlights the most valuable action across leads, deals, and customers.
+- Key changes (files/areas): `src/lib/decision-engine.js`, `src/App.jsx`, `tests/unit/decision-engine.test.mjs`, `docs/USER_GUIDE.md`, `docs/ARCHITECTURE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None (local-only).
+- Follow-ups: Tune scoring weights and wire suggested actions to actual workflows when ready.
+
+## 2026-02-03
 - Outcome: Refactored the Customers (portfolio) view to surface lifecycle stage and activation status alongside health and ROI.
 - Why: Align the account-focused UX with the lead → activation lifecycle and make activation progress visible.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`, `docs/agent/backlog.md`.

@@ -47,6 +47,13 @@ The cockpit is a React + Vite SPA that models a client ontology and the operatio
 - Revenue efficiency (LTV:CAC, CAC payback, gross profit)
 - Spend alignment signals (profit share vs CAC share, spend delta, action)
 
+Decision recommendations are computed in `src/lib/decision-engine.js` to rank:
+- Lead follow-ups (stage, expected value, staleness)
+- Deal close plans (amount × probability, close-date urgency)
+- Customer activation focus (ltv_at_risk, activation status, renewal risk, data gaps)
+
+These recommendations surface as the “Priority focus” panel on Home and the focus queue in Next Steps.
+
 The revenue efficiency layer combines:
 - `estimated_ltv`
 - `customer_acquisition_cost`
