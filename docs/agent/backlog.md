@@ -21,7 +21,8 @@
 - [ ] Add onboarding checklist and empty-state guidance for first-time owners.
 - [ ] Add lead capture filters for gaps/stale status.
 - [x] Add one-click lead conversion (lead → deal) from the pipeline view.
-- [ ] Add deal → customer conversion and activation kickoff action.
+- [x] Add deal → customer conversion quick action.
+- [ ] Auto-create onboarding activation plan when converting a deal.
 
 ## P2 (later)
 - [ ] Package north-star-review skill into a distributable `.skill` if needed.

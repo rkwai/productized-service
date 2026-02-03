@@ -1413,6 +1413,92 @@ const App = () => {
     }
   };
 
+  const handleConvertDealToAccount = (deal) => {
+    if (!deal) return;
+    let createdId = "";
+    applyUpdate((next) => {
+      const accountType = next.config.semantic_layer.object_types.find((type) => type.id === "client_account");
+      if (!accountType) return;
+      if (!next.instances.client_account) {
+        next.instances.client_account = [];
+      }
+      const leadRecord = (next.instances.lead || []).find((item) => item.lead_id === deal.lead_id);
+      const newAccount = createEmptyRecord(accountType);
+      const todayIso = new Date().toISOString().split("T")[0];
+      newAccount.account_name =
+        leadRecord?.company_name || deal.deal_name || `Customer ${newAccount.account_id}`;
+      newAccount.account_status = "Active";
+      newAccount.lifecycle_stage = "Onboarded";
+      newAccount.activation_status = "On Track";
+      newAccount.created_date = todayIso;
+      newAccount.segment_tag = leadRecord?.segment_candidate || "";
+      newAccount.total_contract_value_to_date = deal.amount || "";
+      newAccount.estimated_ltv = deal.amount || "";
+      next.instances.client_account.push(newAccount);
+      createdId = newAccount.account_id;
+      generateAuditEntry(
+        { action: "create", object_type: "client_account", object_id: createdId },
+        next
+      );
+
+      const dealIndex = (next.instances.deal || []).findIndex((item) => item.deal_id === deal.deal_id);
+      if (dealIndex !== -1) {
+        next.instances.deal[dealIndex].account_id = createdId;
+        next.instances.deal[dealIndex].status = "Won";
+        next.instances.deal[dealIndex].stage = "Closed Won";
+        generateAuditEntry(
+          { action: "update", object_type: "deal", object_id: next.instances.deal[dealIndex].deal_id },
+          next
+        );
+      }
+
+      if (leadRecord) {
+        const leadIndex = (next.instances.lead || []).findIndex((item) => item.lead_id === leadRecord.lead_id);
+        if (leadIndex !== -1) {
+          next.instances.lead[leadIndex].status = "Converted";
+          next.instances.lead[leadIndex].stage = "Won";
+          generateAuditEntry(
+            { action: "update", object_type: "lead", object_id: next.instances.lead[leadIndex].lead_id },
+            next
+          );
+        }
+      }
+
+      if (!next.links) {
+        next.links = [];
+      }
+      const ensureLink = (link_type, from_id, to_id) => {
+        if (!from_id || !to_id) return;
+        const key = `${link_type}|${from_id}|${to_id}`;
+        const exists = next.links.some(
+          (link) => `${link.link_type}|${link.from_id}|${link.to_id}` === key
+        );
+        if (exists) return;
+        next.links.push({
+          id: `lnk_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          link_type,
+          from_id,
+          to_id,
+        });
+      };
+      ensureLink("deal_converts_to_account", deal.deal_id, createdId);
+      if (deal.lead_id) {
+        ensureLink("lead_has_deal", deal.lead_id, deal.deal_id);
+      }
+      if (leadRecord) {
+        ensureLink("lead_converts_to_account", leadRecord.lead_id, createdId);
+      }
+    });
+
+    if (createdId) {
+      handleSelectObject({
+        page: "portfolio",
+        objectType: "client_account",
+        objectId: createdId,
+      });
+    }
+  };
+
   const handleActionSubmit = (action, formData) => {
     applyUpdate((next) => {
       next.action_log.unshift({
@@ -4027,6 +4113,7 @@ const App = () => {
                         "Customer",
                         "Lead",
                         "Next step",
+                        "Quick actions",
                       ]}
                       rows={filteredDeals.map((deal) => {
                         const accountName = deal.account_id
@@ -4035,6 +4122,7 @@ const App = () => {
                         const leadName = deal.lead_id
                           ? leadMap.get(deal.lead_id)?.company_name || "—"
                           : "—";
+                        const existingAccount = deal.account_id ? accountMap.get(deal.account_id) : null;
                         return {
                           key: deal.deal_id,
                           Deal: deal.deal_name,
@@ -4060,6 +4148,29 @@ const App = () => {
                           Customer: accountName,
                           Lead: leadName,
                           "Next step": deal.next_step_summary || "—",
+                          "Quick actions": (
+                            <div className="table-actions">
+                              <Button
+                                size="sm"
+                                variant={existingAccount ? "outline" : "secondary"}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  if (existingAccount) {
+                                    handleSelectObject({
+                                      page: "portfolio",
+                                      objectType: "client_account",
+                                      objectId: existingAccount.account_id,
+                                    });
+                                  } else {
+                                    handleConvertDealToAccount(deal);
+                                  }
+                                }}
+                                disabled={isViewer}
+                              >
+                                {existingAccount ? "View customer" : "Convert to customer"}
+                              </Button>
+                            </div>
+                          ),
                           onClick: () =>
                             handleSelectObject({
                               page: "deals",

@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Add deal → customer conversion action in pipeline
+- Decision: Added a Convert/View customer quick action on the Deals page that auto-generates a linked customer record and closes the deal.
+- Alternatives considered: Require conversion from Settings; add a separate onboarding wizard first.
+- Rationale: Move from sale to onboarding in one step while preserving lead/deal links.
+- Implications: Created customers start with minimal data; onboarding milestones still need to be created.
+- Follow-ups: Auto-create onboarding engagement + milestones at conversion.
+
 ## 2026-02-03 — Add lead → deal conversion action in pipeline
 - Decision: Added a Create/View deal quick action on the Leads page that auto-generates a linked deal record.
 - Alternatives considered: Require conversion from Settings; rely on manual deal creation without lead linkage.

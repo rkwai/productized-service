@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Added a deal → customer conversion action with auto-populated customer fields and linked records.
+- Why: Reduce friction in onboarding by letting owners convert a won deal into an account from the pipeline view.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Auto-create onboarding milestones/workstreams on conversion.
+
+## 2026-02-03
 - Outcome: Added a lead → deal conversion action with auto-filled deal fields and quick “view deal” buttons from the lead pipeline.
 - Why: ICP needs to turn qualified leads into opportunities without detouring to Settings.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
