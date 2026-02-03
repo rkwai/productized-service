@@ -61,6 +61,7 @@ Use **Profitability by segment** on the Customers page to:
 - Identify which segment generates the highest gross profit.
 - Compare LTV:CAC efficiency and payback speed side-by-side.
 - Compare profit share vs CAC share and act on spend deltas.
+- Log a marketing focus decision directly from the segment action button.
 
 The **Spend recommendation** callout on Home summarizes the top segment to fund based on profit share and LTV:CAC.
 

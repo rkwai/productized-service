@@ -102,6 +102,12 @@ const getSpendTone = (value) => {
   if (value <= -5) return "status-pill--bad";
   return "status-pill--warn";
 };
+const getSpendActionTone = (action) => {
+  if (!action) return "status-pill--neutral";
+  if (action === "Increase spend") return "status-pill--good";
+  if (action === "Reduce spend") return "status-pill--bad";
+  return "status-pill--warn";
+};
 const getFreshnessTone = (value) => {
   if (!Number.isFinite(value)) return "status-pill--neutral";
   if (value <= 14) return "status-pill--good";
@@ -2105,6 +2111,30 @@ const App = () => {
     setActionSheet({ action, context: account });
   };
 
+  const handleLogMarketingFocus = (segment) => {
+    if (!segment) return;
+    applyUpdate((next) => {
+      next.action_log.unshift({
+        id: `action_${Date.now()}`,
+        action_type: "set_marketing_focus",
+        parameters: {
+          segment: segment.segment,
+          action: segment.spendAction,
+          ltv_cac_ratio: segment.ltvCacRatio,
+          profit_share_pct: segment.profitShare,
+          cac_share_pct: segment.cacShare,
+        },
+        status: "Logged",
+        run_at: new Date().toISOString(),
+        side_effects_status: [],
+      });
+      generateAuditEntry(
+        { action: "log_marketing_focus", object_type: "segment", object_id: segment.segment },
+        next
+      );
+    });
+  };
+
   const deliveryActionContext =
     selectedObjectType === "milestone"
       ? selectedObjectRecord || {}
@@ -2549,7 +2579,25 @@ const App = () => {
     ),
     "LTV:CAC": segment.ltvCacRatio ? `${segment.ltvCacRatio}x` : "—",
     "CAC payback": segment.avgPayback ? `${segment.avgPayback} mo` : "—",
-    Action: segment.spendAction,
+    Action: (
+      <div className="table-actions">
+        <StatusPill
+          label={segment.spendAction || "Hold spend"}
+          tone={getSpendActionTone(segment.spendAction)}
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleLogMarketingFocus(segment);
+          }}
+          disabled={isViewer}
+        >
+          Log focus
+        </Button>
+      </div>
+    ),
   }));
 
   const segmentSpendRows = spendAlignmentRows.map((segment) => ({

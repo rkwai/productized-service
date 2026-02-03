@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Added a marketing focus log action on the segment profitability table.
+- Why: Make the “take action on most valuable segment” step explicit and traceable.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Add a formal action type for marketing focus in config.
+
+## 2026-02-03
 - Outcome: Added customer quick actions for activation recovery, activation drive, retention plans, and data gap cleanup in the Customers table.
 - Why: Activation and retention moves should be one click from the portfolio view, not hidden in action tabs.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.

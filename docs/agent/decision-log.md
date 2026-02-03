@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Log marketing focus decisions from segment profitability
+- Decision: Added a “Log focus” action on the segment profitability table to record marketing focus decisions.
+- Alternatives considered: Rely on manual notes; add a separate marketing plan module.
+- Rationale: Owners need a lightweight way to translate segment insights into actions.
+- Implications: Action log now includes a custom action type not yet formalized in config.
+- Follow-ups: Add `set_marketing_focus` to config action types.
+
 ## 2026-02-03 — Add customer activation/retention quick actions in portfolio
 - Decision: Added a Quick actions column on the Customers table to launch activation, retention, and data-gap workflows.
 - Alternatives considered: Keep actions only in the detail panel; add a separate “activation queue” page.
