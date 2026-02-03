@@ -15,6 +15,15 @@ import {
   toTitle,
   generateAuditEntry,
 } from "@/lib/dashboard";
+import {
+  buildAliasLookup,
+  buildNormalizedLookup,
+  coerceRecordValues,
+  getFirstLookupValue,
+  mapRecordToSchema,
+  normalizeKey,
+  parseImportText,
+} from "@/lib/importer";
 import { buildExecutiveBrief } from "@/lib/executive-brief";
 import { clearState } from "@/lib/storage";
 import { NAV_ITEMS, readRouteFromHash, resolveActivePage, toHashHref } from "@/lib/routing.mjs";
@@ -133,6 +142,79 @@ const PORTFOLIO_VIEW_PRESETS = [
     ),
   },
 ];
+
+const IMPORT_FIELD_ALIASES = {
+  lead: {
+    lead_id: ["id", "lead", "lead_id", "leadid"],
+    company_name: ["company", "company_name", "business_name", "organization", "org"],
+    contact_name: ["contact", "contact_name", "name", "primary_contact"],
+    contact_email: ["email", "contact_email", "email_address"],
+    contact_title: ["title", "contact_title", "role"],
+    phone: ["phone", "phone_number", "contact_phone"],
+    source: ["source", "channel", "lead_source"],
+    stage: ["stage", "lead_stage", "lifecycle_stage"],
+    status: ["status", "lead_status"],
+    created_date: ["created_date", "created", "created_at"],
+    last_contacted_at: ["last_contacted_at", "last_contact", "last_touch", "last_touch_at"],
+    owner_team_member_id: ["owner", "owner_id", "owner_team_member_id", "assignee"],
+    next_step_summary: ["next_step", "next_steps", "next_action", "next_step_summary"],
+    expected_value: ["expected_value", "value", "pipeline_value", "expected_revenue"],
+    segment_candidate: ["segment", "segment_candidate", "segment_tag"],
+    notes: ["notes", "note", "comments", "comment"],
+  },
+  deal: {
+    deal_id: ["id", "deal", "deal_id", "dealid", "opportunity_id"],
+    lead_id: ["lead_id", "lead", "leadid"],
+    account_id: ["account_id", "account", "customer_id", "client_account_id"],
+    deal_name: ["deal_name", "name", "opportunity", "opportunity_name"],
+    stage: ["stage", "deal_stage", "pipeline_stage", "lifecycle_stage"],
+    status: ["status", "deal_status"],
+    amount: ["amount", "value", "deal_value", "pipeline_value", "contract_value"],
+    probability: ["probability", "win_probability", "win_rate", "close_probability"],
+    expected_close_date: ["expected_close_date", "expected_close", "close_date", "target_close_date"],
+    closed_date: ["closed_date", "closed_at", "won_date", "lost_date"],
+    next_step_summary: ["next_step", "next_steps", "next_action", "next_step_summary"],
+  },
+};
+
+const IMPORT_TEMPLATES = {
+  lead: {
+    csv: `lead_id,company_name,contact_name,contact_email,source,stage,status,expected_value,next_step_summary,created_date
+lead_1001,Northwind Labs,Jamie Smith,jamie@northwindlabs.com,Outbound,Qualified,Open,25000,Schedule discovery,2026-02-01`,
+    json: `[
+  {
+    "lead_id": "lead_1001",
+    "company_name": "Northwind Labs",
+    "contact_name": "Jamie Smith",
+    "contact_email": "jamie@northwindlabs.com",
+    "source": "Outbound",
+    "stage": "Qualified",
+    "status": "Open",
+    "expected_value": 25000,
+    "next_step_summary": "Schedule discovery",
+    "created_date": "2026-02-01"
+  }
+]`,
+  },
+  deal: {
+    csv: `deal_id,lead_id,account_id,deal_name,stage,status,amount,probability,expected_close_date,next_step_summary
+deal_2001,lead_1001,acc_northwind,Quarterly product leadership retainer,Negotiation,Open,45000,0.4,2026-02-28,Send proposal`,
+    json: `[
+  {
+    "deal_id": "deal_2001",
+    "lead_id": "lead_1001",
+    "account_id": "acc_northwind",
+    "deal_name": "Quarterly product leadership retainer",
+    "stage": "Negotiation",
+    "status": "Open",
+    "amount": 45000,
+    "probability": 0.4,
+    "expected_close_date": "2026-02-28",
+    "next_step_summary": "Send proposal"
+  }
+]`,
+  },
+};
 
 const getHealthStatus = (score) => {
   if (score >= 80) {
@@ -1005,6 +1087,11 @@ const App = () => {
   const [selectedPortfolioAccounts, setSelectedPortfolioAccounts] = useState([]);
   const [leadFilters, setLeadFilters] = useState({ search: "", stage: "all", status: "all" });
   const [dealFilters, setDealFilters] = useState({ search: "", stage: "all", status: "all" });
+  const [importTarget, setImportTarget] = useState("lead");
+  const [importText, setImportText] = useState("");
+  const [importFileName, setImportFileName] = useState("");
+  const [importMessage, setImportMessage] = useState({ text: "", tone: "help-text" });
+  const [importWarnings, setImportWarnings] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1173,6 +1260,314 @@ const App = () => {
     anchor.download = "ontology-decision-cockpit.json";
     anchor.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      setImportText(text);
+      setImportFileName(file.name);
+      setImportMessage({ text: `Loaded ${file.name}.`, tone: "help-text" });
+      setImportWarnings([]);
+    } catch (error) {
+      setImportMessage({ text: "Failed to read file.", tone: "help-text error" });
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleClearImport = () => {
+    setImportText("");
+    setImportFileName("");
+    setImportWarnings([]);
+    setImportMessage({ text: "", tone: "help-text" });
+  };
+
+  const handleUseTemplate = (format) => {
+    const template = IMPORT_TEMPLATES[importTarget]?.[format];
+    if (!template) return;
+    setImportText(template);
+    setImportFileName("");
+    setImportWarnings([]);
+    setImportMessage({ text: `${format.toUpperCase()} template loaded.`, tone: "help-text" });
+  };
+
+  const handleImportData = () => {
+    if (!state) return;
+    const trimmed = importText.trim();
+    if (!trimmed) {
+      setImportMessage({ text: "Paste CSV/JSON or upload a file to import.", tone: "help-text error" });
+      setImportWarnings([]);
+      return;
+    }
+
+    const objectType = state.config.semantic_layer.object_types.find((type) => type.id === importTarget);
+    if (!objectType) {
+      setImportMessage({ text: "Unknown import target.", tone: "help-text error" });
+      setImportWarnings([]);
+      return;
+    }
+
+    let parsed;
+    try {
+      parsed = parseImportText(trimmed);
+    } catch (error) {
+      setImportMessage({ text: error.message, tone: "help-text error" });
+      setImportWarnings([]);
+      return;
+    }
+
+    const cleanedRecords = (parsed.records || []).filter((record) =>
+      Object.values(record || {}).some((value) => String(value ?? "").trim() !== "")
+    );
+
+    if (!cleanedRecords.length) {
+      setImportMessage({ text: "No rows found to import.", tone: "help-text error" });
+      setImportWarnings([]);
+      return;
+    }
+
+    const aliasLookup = buildAliasLookup(objectType, IMPORT_FIELD_ALIASES[importTarget] || {});
+    const idField =
+      objectType.properties.find((prop) => prop.endsWith("_id")) || objectType.properties[0];
+    const normalizeId = (value) => String(value ?? "").trim();
+
+    const warningSet = new Set();
+    let createdCount = 0;
+    let updatedCount = 0;
+    let generatedIdCount = 0;
+    let linkCount = 0;
+    let skippedEmptyCount = 0;
+    let unresolvedLeadCount = 0;
+    let unresolvedAccountCount = 0;
+    let missingLeadIdCount = 0;
+    let missingAccountIdCount = 0;
+    let resolvedReferenceCount = 0;
+    const unknownColumns = new Set();
+
+    applyUpdate((next) => {
+      if (!next.instances[importTarget]) {
+        next.instances[importTarget] = [];
+      }
+      if (!next.links) {
+        next.links = [];
+      }
+
+      const instances = next.instances[importTarget];
+      const recordIndex = new Map();
+      instances.forEach((item, index) => {
+        const normalizedId = normalizeId(item?.[idField]);
+        if (normalizedId) {
+          recordIndex.set(normalizedId, { item, index });
+        }
+      });
+      const leadIds = new Set(
+        (next.instances.lead || [])
+          .map((lead) => normalizeId(lead.lead_id))
+          .filter((value) => value)
+      );
+      const accountIds = new Set(
+        (next.instances.client_account || [])
+          .map((account) => normalizeId(account.account_id))
+          .filter((value) => value)
+      );
+      const leadNameLookup = new Map();
+      (next.instances.lead || []).forEach((lead) => {
+        const key = normalizeKey(lead.company_name);
+        const value = normalizeId(lead.lead_id);
+        if (key && value) {
+          leadNameLookup.set(key, value);
+        }
+      });
+      const accountNameLookup = new Map();
+      (next.instances.client_account || []).forEach((account) => {
+        const key = normalizeKey(account.account_name);
+        const value = normalizeId(account.account_id);
+        if (key && value) {
+          accountNameLookup.set(key, value);
+        }
+      });
+      const linkKeySet = new Set(
+        next.links.map((link) => `${link.link_type}|${link.from_id}|${link.to_id}`)
+      );
+      const addLink = (link_type, from_id, to_id) => {
+        if (!from_id || !to_id) return;
+        const key = `${link_type}|${from_id}|${to_id}`;
+        if (linkKeySet.has(key)) return;
+        next.links.push({
+          id: `lnk_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          link_type,
+          from_id,
+          to_id,
+        });
+        linkKeySet.add(key);
+        linkCount += 1;
+      };
+
+      cleanedRecords.forEach((raw) => {
+        const { mapped, unknownKeys } = mapRecordToSchema(raw, aliasLookup);
+        unknownKeys.forEach((key) => unknownColumns.add(key));
+        const coerced = coerceRecordValues(mapped, objectType);
+        if (!Object.keys(coerced).length) {
+          skippedEmptyCount += 1;
+          return;
+        }
+
+        if (importTarget === "deal") {
+          const rawLookup = buildNormalizedLookup(raw);
+          if (!coerced.lead_id) {
+            const leadHint = getFirstLookupValue(rawLookup, [
+              "lead_company",
+              "lead_name",
+              "company_name",
+            ]);
+            if (leadHint) {
+              const match = leadNameLookup.get(normalizeKey(leadHint));
+              if (match) {
+                coerced.lead_id = match;
+                resolvedReferenceCount += 1;
+              } else {
+                unresolvedLeadCount += 1;
+              }
+            }
+          }
+          if (!coerced.account_id) {
+            const accountHint = getFirstLookupValue(rawLookup, [
+              "account_name",
+              "customer_name",
+              "company_name",
+            ]);
+            if (accountHint) {
+              const match = accountNameLookup.get(normalizeKey(accountHint));
+              if (match) {
+                coerced.account_id = match;
+                resolvedReferenceCount += 1;
+              } else {
+                unresolvedAccountCount += 1;
+              }
+            }
+          }
+        }
+
+        const providedId = normalizeId(coerced[idField]);
+        const recordId =
+          providedId || `${importTarget}_${Math.random().toString(36).slice(2, 8)}`;
+        if (!providedId) {
+          coerced[idField] = recordId;
+          generatedIdCount += 1;
+        } else {
+          coerced[idField] = recordId;
+        }
+
+        const existing = recordIndex.get(recordId);
+        if (existing) {
+          objectType.properties.forEach((prop) => {
+            const value = coerced[prop];
+            if (value !== undefined && value !== "") {
+              existing.item[prop] = value;
+            }
+          });
+          updatedCount += 1;
+          generateAuditEntry(
+            { action: "update", object_type: importTarget, object_id: recordId },
+            next
+          );
+        } else {
+          const newRecord = createEmptyRecord(objectType);
+          objectType.properties.forEach((prop) => {
+            const value = coerced[prop];
+            if (value !== undefined && value !== "") {
+              newRecord[prop] = value;
+            }
+          });
+          if (!newRecord[idField]) {
+            newRecord[idField] = recordId;
+          }
+          instances.push(newRecord);
+          recordIndex.set(recordId, { item: newRecord, index: instances.length - 1 });
+          createdCount += 1;
+          generateAuditEntry(
+            { action: "create", object_type: importTarget, object_id: recordId },
+            next
+          );
+        }
+
+        if (importTarget === "deal") {
+          const normalizedLeadId = normalizeId(coerced.lead_id);
+          const normalizedAccountId = normalizeId(coerced.account_id);
+          if (normalizedLeadId) {
+            coerced.lead_id = normalizedLeadId;
+          }
+          if (normalizedAccountId) {
+            coerced.account_id = normalizedAccountId;
+          }
+          if (normalizedLeadId && !leadIds.has(normalizedLeadId)) {
+            missingLeadIdCount += 1;
+          }
+          if (normalizedAccountId && !accountIds.has(normalizedAccountId)) {
+            missingAccountIdCount += 1;
+          }
+          if (normalizedLeadId && leadIds.has(normalizedLeadId)) {
+            addLink("lead_has_deal", normalizedLeadId, recordId);
+          }
+          if (normalizedAccountId && accountIds.has(normalizedAccountId)) {
+            addLink("deal_converts_to_account", recordId, normalizedAccountId);
+          }
+          if (
+            normalizedLeadId &&
+            normalizedAccountId &&
+            leadIds.has(normalizedLeadId) &&
+            accountIds.has(normalizedAccountId)
+          ) {
+            addLink("lead_converts_to_account", normalizedLeadId, normalizedAccountId);
+          }
+        }
+      });
+    });
+
+    if (unknownColumns.size) {
+      warningSet.add(`Ignored columns: ${Array.from(unknownColumns).join(", ")}.`);
+    }
+    if (generatedIdCount) {
+      warningSet.add(`Generated IDs for ${generatedIdCount} ${importTarget} record(s).`);
+    }
+    if (skippedEmptyCount) {
+      warningSet.add(`Skipped ${skippedEmptyCount} empty row(s).`);
+    }
+    if (unresolvedLeadCount) {
+      warningSet.add(`Could not match ${unresolvedLeadCount} lead name(s) to existing leads.`);
+    }
+    if (unresolvedAccountCount) {
+      warningSet.add(
+        `Could not match ${unresolvedAccountCount} account name(s) to existing customers.`
+      );
+    }
+    if (missingLeadIdCount) {
+      warningSet.add(
+        `${missingLeadIdCount} deal(s) reference lead_id values that do not exist yet.`
+      );
+    }
+    if (missingAccountIdCount) {
+      warningSet.add(
+        `${missingAccountIdCount} deal(s) reference account_id values that do not exist yet.`
+      );
+    }
+
+    const totalImported = createdCount + updatedCount;
+    const summaryParts = [
+      `Imported ${totalImported} ${importTarget}${totalImported === 1 ? "" : "s"} (${createdCount} new, ${updatedCount} updated).`,
+      linkCount ? `Created ${linkCount} link(s).` : null,
+      resolvedReferenceCount ? `Resolved ${resolvedReferenceCount} name reference(s).` : null,
+      parsed.format !== "empty" ? `Source: ${parsed.format.toUpperCase()}.` : null,
+    ].filter(Boolean);
+
+    setImportMessage({
+      text: summaryParts.join(" "),
+      tone: totalImported ? "help-text success" : "help-text",
+    });
+    setImportWarnings(Array.from(warningSet));
   };
 
   const handleFilterChange = (key, value) => {
@@ -4344,6 +4739,75 @@ const App = () => {
                     <p>{state.config.data_integration_mapping.pipeline_tool}</p>
                   </div>
                 </div>
+              </div>
+              <div className="panel">
+                <h3>Lead & deal imports</h3>
+                <p className="help-text">
+                  Import CSV or JSON files to add/update leads and deals. Columns are case-insensitive and unknown
+                  columns are ignored.
+                </p>
+                <div className="field-grid">
+                  <div>
+                    <h4>Object type</h4>
+                    <Select value={importTarget} onValueChange={setImportTarget} disabled={isViewer}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select object type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lead">Lead</SelectItem>
+                        <SelectItem value="deal">Deal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <h4>Upload file</h4>
+                    <Input
+                      type="file"
+                      accept=".csv,.json,text/csv,application/json"
+                      onChange={handleImportFile}
+                      disabled={isViewer}
+                    />
+                    {importFileName && <p className="help-text">Loaded: {importFileName}</p>}
+                  </div>
+                </div>
+                <div className="stacked">
+                  <h4>Paste CSV or JSON</h4>
+                  <Textarea
+                    rows={8}
+                    value={importText}
+                    onChange={(event) => setImportText(event.target.value)}
+                    disabled={isViewer}
+                  />
+                  <div className="button-row">
+                    <Button variant="ghost" onClick={() => handleUseTemplate("csv")} disabled={isViewer}>
+                      Use CSV template
+                    </Button>
+                    <Button variant="ghost" onClick={() => handleUseTemplate("json")} disabled={isViewer}>
+                      Use JSON template
+                    </Button>
+                  </div>
+                </div>
+                <div className="button-row">
+                  <Button onClick={handleImportData} disabled={isViewer}>
+                    Import {importTarget === "lead" ? "Leads" : "Deals"}
+                  </Button>
+                  <Button variant="ghost" onClick={handleClearImport} disabled={isViewer}>
+                    Clear
+                  </Button>
+                </div>
+                {importMessage.text && <p className={importMessage.tone}>{importMessage.text}</p>}
+                {importWarnings.length > 0 && (
+                  <ul className="help-text">
+                    {importWarnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                )}
+                <p className="help-text">
+                  Deals can link to leads/customers with <code>lead_id</code> and <code>account_id</code>. If you
+                  include <code>account_name</code> or <code>lead_company</code>, the importer will try to match
+                  existing records.
+                </p>
               </div>
               <div className="panel">
                 <h3>Audit & Activity</h3>

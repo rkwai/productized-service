@@ -36,6 +36,16 @@ Use the role selector in the header to switch roles.
 - New records can be added from list pages.
 - All updates auto-save locally.
 
+## Importing leads and deals
+Use **Settings → Lead & deal imports** to upload CSV/JSON files or paste data directly.
+
+Tips:
+- Column names are case-insensitive (for example `company_name` or `Company Name`).
+- Missing IDs will be generated, but add `lead_id` or `deal_id` to keep references stable.
+- Deals can link to leads/customers with `lead_id` and `account_id`. If you include `account_name` or `lead_company`,
+  the importer will attempt to match existing records.
+- Use **Use CSV template** or **Use JSON template** in Settings to start from the recommended columns.
+
 ## Revenue efficiency (LTV:CAC)
 Owners can review segment ROI and profit concentration directly in the Home and Customers views:
 - **LTV:CAC ratio** is computed from `estimated_ltv` and `customer_acquisition_cost` on each account.

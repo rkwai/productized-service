@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Implement local lead/deal import flow with schema-aware parsing
+- Decision: Added a local CSV/JSON import flow for leads and deals with alias mapping, validation warnings, and link creation when IDs resolve.
+- Alternatives considered: Add a full mapping UI or third-party CSV parser; defer imports until integrations exist.
+- Rationale: Keep the app dependency-free and unblock rapid data ingestion for the internal launch timeline.
+- Implications: Import is best-effort (warnings instead of hard failures); additional preview/mapping UX may be needed later.
+- Follow-ups: Improve test runner coverage and consider richer import validation/preview.
+
 ## 2026-02-03 — Add Leads and Deals pages to the UI
 - Decision: Added dedicated Leads and Deals pages with filters, KPIs, and object detail panels.
 - Alternatives considered: Fold leads/deals into the Customers page; delay UI until import pipeline exists.

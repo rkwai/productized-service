@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Added lead/deal import flow in Settings with CSV/JSON parsing, validation warnings, and link creation.
+- Why: Enable fast data ingestion for lead/deal pipelines ahead of the internal launch.
+- Key changes (files/areas): `src/App.jsx`, `src/lib/importer.js`, `docs/USER_GUIDE.md`, `tests/unit/importer.test.mjs`.
+- Tests: `npm run test`, `node tests/unit/importer.test.mjs`.
+- Metrics / instrumentation: None.
+- Follow-ups: Ensure the unit test runner executes all test files; consider import preview/mapping UX.
+
+## 2026-02-03
 - Outcome: Added Leads and Deals pages with filters, KPIs, and object details.
 - Why: Surface the lead/deal lifecycle in the UI to match the new data model.
 - Key changes (files/areas): `src/App.jsx`, `src/lib/routing.mjs`, `docs/USER_GUIDE.md`.
