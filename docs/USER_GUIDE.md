@@ -34,7 +34,7 @@ Use the role selector in the header to switch roles.
 ## Editing data
 - Use inline forms to edit object records.
 - New records can be added from list pages.
-- Select a lead to quick-edit core fields in the right-side detail panel.
+- Select a row to open the detail card underneath it; leads include a quick-edit section.
 - Quick add pre-fills stage/status and dates so you can move faster.
 - All updates auto-save locally.
 

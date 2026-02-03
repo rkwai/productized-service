@@ -1,6 +1,22 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Hid the empty-detail tip behind a hover tooltip trigger.
+- Why: Reduce visual noise while keeping help discoverable.
+- Key changes (files/areas): `src/App.jsx`, `src/index.css`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
+## 2026-02-03
+- Outcome: Moved object detail cards inline under selected table rows instead of a right-hand panel.
+- Why: ICP expects row expansion for quick context without shifting focus.
+- Key changes (files/areas): `src/App.jsx`, `src/index.css`, `docs/USER_GUIDE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Consider reducing hover cursor for non-clickable summary tables.
+
+## 2026-02-03
 - Outcome: Added explicit workspace data controls to reload seed data or start with empty records.
 - Why: ICP needs a fast way to switch between demo data and real data entry.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.

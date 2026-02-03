@@ -25,6 +25,7 @@
 - [x] Auto-create onboarding activation plan when converting a deal.
 - [ ] Add lead attention summary card with one-click filter chips.
 - [ ] Add an empty-data banner with suggested first actions (import, add lead, add customer).
+- [ ] Reduce hover/cursor affordances for non-clickable summary tables.
 
 ## P2 (later)
 - [ ] Package north-star-review skill into a distributable `.skill` if needed.

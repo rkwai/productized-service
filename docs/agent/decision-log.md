@@ -1,5 +1,19 @@
 # Decision Log
 
+## 2026-02-03 — Hide empty-detail tip behind tooltip
+- Decision: Replaced the empty detail card tip with a hover tooltip (“?”).
+- Alternatives considered: Keep the full tip visible; remove the tip entirely.
+- Rationale: Keep guidance available without cluttering the UI.
+- Implications: Discoverability depends on the tooltip affordance.
+- Follow-ups: None.
+
+## 2026-02-03 — Inline detail cards under table rows
+- Decision: Render object detail cards as expandable rows beneath the selected table row.
+- Alternatives considered: Keep the right-hand sticky panel; open a modal drawer.
+- Rationale: Keeps context close to the data and matches ICP expectations for row drill-down.
+- Implications: Tables handle expansion; summary tables without click targets may still show hover affordances.
+- Follow-ups: Adjust hover styling for non-clickable rows if needed.
+
 ## 2026-02-03 — Add workspace data controls
 - Decision: Added Settings controls to reload seed data or clear all instance data while keeping config.
 - Alternatives considered: Keep only the reset button in JSON export; require manual local storage clearing.

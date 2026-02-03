@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   buildReferenceMap,
   computeDerived,
@@ -729,7 +729,7 @@ const RollupCard = ({ title, description, topOutcomes, bottomOutcomes }) => (
   </Card>
 );
 
-const DataTable = ({ columns, rows, onRowClick }) => (
+const DataTable = ({ columns, rows, onRowClick, expandedRowKey, renderExpandedRow }) => (
   <div className="table-wrapper">
     <table>
       <thead>
@@ -741,15 +741,21 @@ const DataTable = ({ columns, rows, onRowClick }) => (
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr
-            key={row.key}
-            className={row.className}
-            onClick={row.onClick || (() => onRowClick?.(row))}
-          >
-            {columns.map((column) => (
-              <td key={`${row.key}-${column}`}>{row[column] ?? "—"}</td>
-            ))}
-          </tr>
+          <Fragment key={row.key}>
+            <tr
+              className={row.className}
+              onClick={row.onClick || (() => onRowClick?.(row))}
+            >
+              {columns.map((column) => (
+                <td key={`${row.key}-${column}`}>{row[column] ?? "—"}</td>
+              ))}
+            </tr>
+            {expandedRowKey && row.key === expandedRowKey && renderExpandedRow ? (
+              <tr className="table-expand-row">
+                <td colSpan={columns.length}>{renderExpandedRow(row)}</td>
+              </tr>
+            ) : null}
+          </Fragment>
         ))}
       </tbody>
     </table>
@@ -1040,6 +1046,7 @@ const ObjectViewPanel = ({
   onUpdateRecord,
   referenceMap = {},
   isViewer = false,
+  variant = "sidebar",
 }) => {
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -1050,9 +1057,17 @@ const ObjectViewPanel = ({
   if (!record || !objectType) {
     return (
       <aside className="object-panel empty">
-        <div>
-          <h3>Select an object</h3>
-          <p>Choose a row to view its object details, relationships, and actions.</p>
+        <div className="empty-help">
+          <span>Details</span>
+          <div className="tooltip">
+            <button type="button" className="tooltip-trigger" aria-label="How to use details panel">
+              ?
+            </button>
+            <div className="tooltip-content" role="tooltip">
+              <strong>Select an object</strong>
+              <p>Choose a row to view its object details, relationships, and actions.</p>
+            </div>
+          </div>
         </div>
       </aside>
     );
@@ -1086,7 +1101,7 @@ const ObjectViewPanel = ({
   };
 
   return (
-    <aside className="object-panel">
+    <aside className={`object-panel${variant === "inline" ? " object-panel--inline" : ""}`}>
       <header>
         <div>
           <h3>{primaryLabel}</h3>
@@ -2351,6 +2366,19 @@ const App = () => {
     [state]
   );
   const latestMarketingFocus = marketingFocusLog[0] || null;
+  const renderInlineObjectPanel = () => (
+    <ObjectViewPanel
+      record={selectedObjectRecord}
+      objectType={selectedObjectTypeDef}
+      derivedValues={derivedForSelected}
+      relationships={relationshipsForSelected}
+      onUpdateRecord={updateRecordById}
+      referenceMap={referenceMap}
+      isViewer={isViewer}
+      onAction={actionOptions}
+      variant="inline"
+    />
+  );
 
   const deliveryActionContext =
     selectedObjectType === "milestone"
@@ -4095,6 +4123,10 @@ const App = () => {
                         "Value",
                         "Quick actions",
                       ]}
+                      expandedRowKey={
+                        selectedObjectType === "client_account" ? selectedObjectId : null
+                      }
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={attentionAccounts.map(
                         ({ account, health, risk, segment, atRiskMilestoneCount, highRiskCount, activationStatus }) => {
                           const renewalRiskValue = risk?.value ?? account.renewal_risk_score;
@@ -4183,16 +4215,6 @@ const App = () => {
                     />
                   </Card>
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
             </section>
           )}
@@ -4319,6 +4341,8 @@ const App = () => {
                         "Source",
                         "Quick actions",
                       ]}
+                      expandedRowKey={selectedObjectType === "lead" ? selectedObjectId : null}
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={visibleLeadSignals.map(({ lead, missingFields, isStale }) => {
                         const existingDeal = dealsByLeadId.get(lead.lead_id)?.[0];
                         return {
@@ -4392,16 +4416,6 @@ const App = () => {
                     />
                   </Card>
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
             </section>
           )}
@@ -4505,6 +4519,8 @@ const App = () => {
                         "Next step",
                         "Quick actions",
                       ]}
+                      expandedRowKey={selectedObjectType === "deal" ? selectedObjectId : null}
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={filteredDeals.map((deal) => {
                         const accountName = deal.account_id
                           ? accountMap.get(deal.account_id)?.account_name || "—"
@@ -4572,16 +4588,6 @@ const App = () => {
                     />
                   </Card>
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
             </section>
           )}
@@ -4861,7 +4867,14 @@ const App = () => {
                         ))}
                       </div>
                     </div>
-                    <DataTable columns={visiblePortfolioColumns} rows={portfolioTableRows} />
+                    <DataTable
+                      columns={visiblePortfolioColumns}
+                      rows={portfolioTableRows}
+                      expandedRowKey={
+                        selectedObjectType === "client_account" ? selectedObjectId : null
+                      }
+                      renderExpandedRow={renderInlineObjectPanel}
+                    />
                     <div className="table-actions">
                       <div>
                         <h4>Bulk actions</h4>
@@ -4894,16 +4907,6 @@ const App = () => {
                     </div>
                   </Card>
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
             </section>
           )}
@@ -5042,12 +5045,6 @@ const App = () => {
                         ) : (
                           <Badge variant="secondary">Clear</Badge>
                         ),
-                        onClick: () =>
-                          handleSelectObject({
-                            page: "engagement-health",
-                            objectType: "consulting_engagement",
-                            objectId: signal.id,
-                          }),
                       }))}
                     />
                   </Card>
@@ -5065,6 +5062,10 @@ const App = () => {
                         "Completion",
                         "Action",
                       ]}
+                      expandedRowKey={
+                        selectedObjectType === "consulting_engagement" ? selectedObjectId : null
+                      }
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={engagementSignals.map((signal) => ({
                         key: signal.id,
                         Activation: signal.name,
@@ -5107,16 +5108,6 @@ const App = () => {
                     />
                   </Card>
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
             </section>
           )}
@@ -5205,6 +5196,10 @@ const App = () => {
                           </div>
                           <DataTable
                             columns={["Milestone", "Status", "Due date", "Risk", "Dependencies", "Owner", "Signoff"]}
+                            expandedRowKey={
+                              selectedObjectType === "milestone" ? selectedObjectId : null
+                            }
+                            renderExpandedRow={renderInlineObjectPanel}
                             rows={groupedMilestones.map(({ milestone, risk, dependencies, isCritical }) => ({
                               key: milestone.milestone_id,
                               className: isCritical ? "critical-row" : "",
@@ -5247,16 +5242,6 @@ const App = () => {
                     </div>
                   </Card>
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
             </section>
           )}
@@ -5351,6 +5336,8 @@ const App = () => {
                         "Status",
                         "Progress",
                       ]}
+                      expandedRowKey={selectedObjectType === "outcome" ? selectedObjectId : null}
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={outcomeStats.map((entry) => ({
                         key: entry.outcome.outcome_id,
                         Outcome: (
@@ -5382,16 +5369,6 @@ const App = () => {
                     />
                   </Card>
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
             </section>
           )}
@@ -5438,6 +5415,8 @@ const App = () => {
                     <h3>Risk & Issue Register</h3>
                     <DataTable
                       columns={["Risk/Issue", "Type", "Severity", "Status", "Owner"]}
+                      expandedRowKey={selectedObjectType === "risk_issue" ? selectedObjectId : null}
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={risks.map((risk) => ({
                         key: risk.risk_issue_id,
                         "Risk/Issue": risk.impact_summary,
@@ -5458,6 +5437,10 @@ const App = () => {
                     <h3>Change Requests</h3>
                     <DataTable
                       columns={["Change request", "Impact scope", "Impact timeline", "Impact fees", "Status"]}
+                      expandedRowKey={
+                        selectedObjectType === "change_request" ? selectedObjectId : null
+                      }
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={changeRequests.map((change) => ({
                         key: change.change_request_id,
                         "Change request": change.description,
@@ -5475,16 +5458,6 @@ const App = () => {
                     />
                   </Card>
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
             </section>
           )}
@@ -5530,6 +5503,8 @@ const App = () => {
                     <h3>Invoices</h3>
                     <DataTable
                       columns={["Invoice", "Due date", "Amount", "Status", "Days past due"]}
+                      expandedRowKey={selectedObjectType === "invoice" ? selectedObjectId : null}
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={invoices.map((invoice) => ({
                         key: invoice.invoice_id,
                         Invoice: invoice.invoice_id,
@@ -5550,6 +5525,8 @@ const App = () => {
                     <h3>Payments</h3>
                     <DataTable
                       columns={["Payment", "Paid at", "Amount", "Status", "Failure reason"]}
+                      expandedRowKey={selectedObjectType === "payment" ? selectedObjectId : null}
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={payments.map((payment) => ({
                         key: payment.payment_id,
                         Payment: payment.payment_id,
@@ -5567,16 +5544,6 @@ const App = () => {
                     />
                   </Card>
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
             </section>
           )}
@@ -5618,6 +5585,8 @@ const App = () => {
                     <h3>Meetings</h3>
                     <DataTable
                       columns={["Meeting", "Scheduled", "Sentiment", "Notes"]}
+                      expandedRowKey={selectedObjectType === "meeting" ? selectedObjectId : null}
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={meetings.map((meeting) => ({
                         key: meeting.meeting_id,
                         Meeting: meeting.meeting_type,
@@ -5637,6 +5606,8 @@ const App = () => {
                     <h3>Decisions</h3>
                     <DataTable
                       columns={["Decision", "Type", "Impact", "Decided by"]}
+                      expandedRowKey={selectedObjectType === "decision" ? selectedObjectId : null}
+                      renderExpandedRow={renderInlineObjectPanel}
                       rows={decisions.map((decision) => ({
                         key: decision.decision_id,
                         Decision: decision.decision_title,
@@ -5653,16 +5624,6 @@ const App = () => {
                     />
                   </Card>
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
             </section>
           )}
@@ -5691,6 +5652,12 @@ const App = () => {
                 {nextSteps.length ? (
                   <DataTable
                     columns={["Item", "Type", "Value at stake", "Suggested action", "Workflow"]}
+                    expandedRowKey={
+                      selectedObjectType && selectedObjectId
+                        ? `focus-${selectedObjectType}-${selectedObjectId}`
+                        : null
+                    }
+                    renderExpandedRow={renderInlineObjectPanel}
                     rows={nextSteps.map((step) => ({
                       key: `focus-${step.objectType}-${step.objectId}`,
                       Item: step.title,
@@ -5736,6 +5703,13 @@ const App = () => {
                       {queue.rows.length ? (
                         <DataTable
                           columns={["Item", "Status", "Due", "Owner", "Action"]}
+                          expandedRowKey={
+                            queue.rows.length &&
+                            selectedObjectType === queue.rows[0].objectType
+                              ? selectedObjectId
+                              : null
+                          }
+                          renderExpandedRow={renderInlineObjectPanel}
                           rows={queue.rows.map((row) => ({
                             key: row.key,
                             Item: row.name,
@@ -5771,16 +5745,6 @@ const App = () => {
                     </Card>
                   ))}
                 </div>
-                <ObjectViewPanel
-                  record={selectedObjectRecord}
-                  objectType={selectedObjectTypeDef}
-                  derivedValues={derivedForSelected}
-                  relationships={relationshipsForSelected}
-                  onUpdateRecord={updateRecordById}
-                  referenceMap={referenceMap}
-                  isViewer={isViewer}
-                  onAction={actionOptions}
-                />
               </div>
               <Card className="panel">
                 <h3>Action log</h3>

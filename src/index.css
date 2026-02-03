@@ -947,9 +947,74 @@ body {
   gap: var(--space-3);
 }
 
+.object-panel--inline {
+  position: static;
+  box-shadow: none;
+}
+
 .object-panel.empty {
   color: var(--muted-text);
   text-align: center;
+}
+
+.empty-help {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip-trigger {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: hsl(var(--secondary));
+  color: var(--muted-text);
+  font-weight: 600;
+  line-height: 1;
+  cursor: help;
+}
+
+.tooltip-content {
+  position: absolute;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: var(--card-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  box-shadow: var(--shadow);
+  width: 220px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  text-align: left;
+  color: var(--text-color);
+}
+
+.tooltip-content strong {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.tooltip-content p {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted-text);
+}
+
+.tooltip:hover .tooltip-content,
+.tooltip:focus-within .tooltip-content {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
 }
 
 .object-panel header {
@@ -1102,6 +1167,15 @@ td {
 tbody tr:hover {
   background: rgba(255, 255, 255, 0.03);
   cursor: pointer;
+}
+
+.table-expand-row td {
+  padding: 0;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.table-expand-row .object-panel {
+  margin: var(--space-3);
 }
 
 .row-highlight-positive {
