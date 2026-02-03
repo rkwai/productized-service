@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Refactored UI copy/navigation to align with the productized-service lead → activation → retention focus.
+- Why: Make the existing design consistent with the internal-launch goals before deeper data model changes.
+- Key changes (files/areas): `src/App.jsx`, `src/lib/routing.mjs`, `src/lib/executive-brief.js`, `docs/USER_GUIDE.md`.
+- Tests: `npm run test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Refactor underlying data model + seed data to add lead lifecycle objects and import format.
+
+## 2026-02-03
 - Outcome: Updated the internal launch plan to make refactoring the existing code/design the first step.
 - Why: Align the current UI/data model with the new lead lifecycle and activation goals.
 - Key changes (files/areas): `docs/PLAN.md`, `docs/agent/backlog.md`, `docs/agent/decision-log.md`.

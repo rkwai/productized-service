@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Reframe UI copy to customer/activation/retention language
+- Decision: Updated navigation and UI copy to reflect lead → activation → retention focus without altering underlying data logic.
+- Alternatives considered: Wait until data model changes were complete; keep legacy account/renewal language until beta.
+- Rationale: Reduce confusion and align the current experience with internal-launch goals immediately.
+- Implications: Some internal field names still use account/engagement/renewal terms; data model refactor is still required.
+- Follow-ups: Align ontology config + seed data with lead lifecycle objects and naming.
+
 ## 2026-02-03 — Make refactor the first step of internal launch
 - Decision: Added a pre-sprint refactor step to align existing code/design with lead lifecycle and activation goals.
 - Alternatives considered: Proceed without refactor and adapt incrementally; delay refactor until after launch.

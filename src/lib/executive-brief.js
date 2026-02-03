@@ -46,16 +46,16 @@ export const buildExecutiveBrief = ({
         : "Add CAC + margin data",
     },
     {
-      label: "Value at risk",
+      label: "Retention exposure",
       value: Number.isFinite(totalLtvAtRisk)
         ? `${formatMoney(totalLtvAtRisk)} LTV at risk`
         : "LTV at risk pending",
       helper: Number.isFinite(pipelineRiskExposure)
-        ? `Pipeline exposure ${formatMoney(pipelineRiskExposure)} across ${accountsAboveRiskThreshold ?? 0} accounts`
+        ? `Pipeline exposure ${formatMoney(pipelineRiskExposure)} across ${accountsAboveRiskThreshold ?? 0} customers`
         : "Pipeline exposure pending",
     },
     {
-      label: "Delivery exposure",
+      label: "Activation exposure",
       value: Number.isFinite(atRiskMilestones)
         ? `${atRiskMilestones} milestones at risk`
         : "Milestone risk pending",
@@ -80,10 +80,10 @@ export const buildExecutiveBrief = ({
 
   if (Number.isFinite(accountsAboveRiskThreshold) && accountsAboveRiskThreshold > 0) {
     decisions.push(
-      `Sponsor renewal recovery for ${accountsAboveRiskThreshold} accounts with ${formatMoney(pipelineRiskExposure)} exposure.`
+      `Sponsor retention recovery for ${accountsAboveRiskThreshold} customers with ${formatMoney(pipelineRiskExposure)} exposure.`
     );
   } else {
-    decisions.push("No accounts above renewal risk threshold; keep a weekly watchlist.");
+    decisions.push("No customers above retention risk threshold; keep a weekly watchlist.");
   }
 
   if ((atRiskMilestones ?? 0) > 0 || (openHighRisks ?? 0) > 0) {
@@ -91,7 +91,7 @@ export const buildExecutiveBrief = ({
       `Unblock ${atRiskMilestones ?? 0} at-risk milestones and ${openHighRisks ?? 0} high-severity risks.`
     );
   } else {
-    decisions.push("Delivery on track; maintain milestone reliability cadence.");
+    decisions.push("Activation on track; maintain milestone reliability cadence.");
   }
 
   const freshnessValue =
@@ -99,7 +99,7 @@ export const buildExecutiveBrief = ({
       ? `${freshAccounts}/${totalAccounts} updated <30d`
       : "Freshness pending";
 
-  const coverage = `ROI coverage ${coverageValue} of accounts · Data freshness ${freshnessValue}.`;
+  const coverage = `ROI coverage ${coverageValue} of customers · Data freshness ${freshnessValue}.`;
 
   return {
     highlights,

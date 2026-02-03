@@ -93,12 +93,12 @@ const getFreshnessTone = (value) => {
 const StatusPill = ({ label, tone }) => <span className={`status-pill ${tone}`}>{label}</span>;
 const PORTFOLIO_COLUMNS = [
   "Select",
-  "Account",
+  "Customer",
   "Industry",
   "Region",
   "Segment",
   "Health",
-  "Renewal risk",
+  "Retention risk",
   "Churn risk",
   "Data freshness",
   "Missing data",
@@ -121,7 +121,7 @@ const PORTFOLIO_VIEW_PRESETS = [
     groupBy: "region",
     filters: { health: "all", risk: "high", missing: "all" },
     columns: PORTFOLIO_COLUMNS.filter((column) =>
-      ["Select", "Account", "Region", "Health", "Renewal risk", "Churn risk", "Data freshness", "LTV at risk"].includes(column)
+      ["Select", "Customer", "Region", "Health", "Retention risk", "Churn risk", "Data freshness", "LTV at risk"].includes(column)
     ),
   },
   {
@@ -129,7 +129,7 @@ const PORTFOLIO_VIEW_PRESETS = [
     groupBy: "segment",
     filters: { health: "all", risk: "all", missing: "gaps" },
     columns: PORTFOLIO_COLUMNS.filter((column) =>
-      ["Select", "Account", "Segment", "Region", "Missing data", "Data freshness", "Health"].includes(column)
+      ["Select", "Customer", "Segment", "Region", "Missing data", "Data freshness", "Health"].includes(column)
     ),
   },
 ];
@@ -746,7 +746,7 @@ const OwnerReliabilityCard = ({ ownerReliability }) => (
   <Card className="owner-reliability-card">
     <CardHeader>
       <CardTitle>Owner Reliability</CardTitle>
-      <CardDescription>Historical on-time delivery trend by owner.</CardDescription>
+      <CardDescription>Historical on-time milestone trend by owner.</CardDescription>
     </CardHeader>
     <CardContent>
       <div className="owner-reliability-grid">
@@ -777,8 +777,8 @@ const GlobalFiltersBar = ({ filters, onChange, filterOptions }) => (
     {[
       { key: "region", label: "Region", options: filterOptions.regions },
       { key: "segment", label: "Segment", options: filterOptions.segments },
-      { key: "account", label: "Account", options: filterOptions.accounts },
-      { key: "engagement", label: "Engagement", options: filterOptions.engagements },
+      { key: "account", label: "Customer", options: filterOptions.accounts },
+      { key: "engagement", label: "Activation", options: filterOptions.engagements },
       { key: "dateRange", label: "Date range", options: ["Last 30 days", "Last 90 days", "YTD"] },
     ].map((filter) => (
       <div key={filter.key} className="filter-item">
@@ -1709,7 +1709,7 @@ const App = () => {
   const segmentCohortRows = segmentBreakdown.map((segment) => ({
     key: `segment-${segment.key}`,
     Cohort: segment.key,
-    Accounts: segment.count,
+    Customers: segment.count,
     "Avg health": (
       <div className="delta-cell">
         <StatusPill label={segment.avgHealthScore} tone={getHealthTone(segment.avgHealthScore)} />
@@ -1727,7 +1727,7 @@ const App = () => {
   const regionCohortRows = regionBreakdown.map((region) => ({
     key: `region-${region.key}`,
     Cohort: region.key,
-    Accounts: region.count,
+    Customers: region.count,
     "Avg health": (
       <div className="delta-cell">
         <StatusPill label={region.avgHealthScore} tone={getHealthTone(region.avgHealthScore)} />
@@ -1751,7 +1751,7 @@ const App = () => {
           ? "row-highlight-negative"
           : "",
     Segment: renderSegmentLabel(segment),
-    Accounts: segment.count,
+    Customers: segment.count,
     "Total gross profit": formatNumber(segment.totalProfit),
     "Profit share": `${segment.profitShare}%`,
     "CAC share": `${segment.cacShare}%`,
@@ -2063,13 +2063,13 @@ const App = () => {
   const portfolioBulkActions = [
     {
       id: "assign_owner",
-      description: "Assign a primary owner to the selected accounts.",
+      description: "Assign a primary owner to the selected customers.",
       parameters: ["owner", "account_ids"],
       side_effects: ["update_account_owner", "notify_owner"],
     },
     {
       id: "create_task",
-      description: "Create a follow-up task tied to the selected accounts.",
+      description: "Create a follow-up task tied to the selected customers.",
       parameters: ["task_title", "due_date", "account_ids"],
       side_effects: ["create_task", "notify_account_team"],
     },
@@ -2078,13 +2078,13 @@ const App = () => {
   const portfolioExportActions = [
     {
       id: "schedule_export",
-      description: "Schedule a recurring export or portfolio report.",
+      description: "Schedule a recurring export or customer report.",
       parameters: ["export_type", "frequency", "recipients"],
       side_effects: ["schedule_export_job", "email_report"],
     },
     {
       id: "generate_export",
-      description: "Generate an on-demand portfolio export.",
+      description: "Generate an on-demand customer export.",
       parameters: ["export_type", "format", "recipients"],
       side_effects: ["generate_export", "deliver_export"],
     },
@@ -2161,17 +2161,17 @@ const App = () => {
           key: `group-${entry.key}`,
           className: "table-group-row",
           Select: "",
-          Account: (
+          Customer: (
             <div className="group-label">
               <strong>{portfolioGroupBy === "region" ? "Region" : "Segment"}:</strong> {entry.key}
-              <span>{entry.count} accounts</span>
+              <span>{entry.count} customers</span>
             </div>
           ),
           Industry: "",
           Region: "",
           Segment: "",
           Health: "",
-          "Renewal risk": "",
+          "Retention risk": "",
           "Churn risk": "",
           "Data freshness": "",
           "Missing data": "",
@@ -2209,12 +2209,12 @@ const App = () => {
           />
         </div>
       ),
-      Account: account.account_name,
+      Customer: account.account_name,
       Industry: account.industry,
       Region: account.region,
       Segment: segmentValue,
       Health: <StatusPill label={healthValue ?? "—"} tone={getHealthTone(healthValue)} />,
-      "Renewal risk": <StatusPill label={riskValue ?? "—"} tone={getRiskTone(riskValue)} />,
+      "Retention risk": <StatusPill label={riskValue ?? "—"} tone={getRiskTone(riskValue)} />,
       "Churn risk": <StatusPill label={churnValue ?? "—"} tone={getRiskTone(churnValue)} />,
       "Data freshness": <StatusPill label={formatDays(freshnessDays)} tone={getFreshnessTone(freshnessDays)} />,
       "Missing data": missingFields.length ? (
@@ -2311,7 +2311,7 @@ const App = () => {
     },
     {
       id: "critical-engagements",
-      label: "Critical engagements (low health)",
+      label: "Critical activations (low health)",
       rows: lowHealthEngagements.map((signal) => ({
         key: signal.id,
         objectType: "consulting_engagement",
@@ -2325,7 +2325,7 @@ const App = () => {
     },
     {
       id: "renewal-collections",
-      label: "Renewal upcoming + collections issues",
+      label: "Retention upcoming + collections issues",
       rows: engagements
         .filter((engagement) =>
           invoices.some(
@@ -2372,8 +2372,8 @@ const App = () => {
           <div className="brand">
             <span className="logo">CT</span>
             <div className="brand-text">
-              <p className="eyebrow">Client Success Control Tower</p>
-              <h1>{state.config.client_metadata.company_name || "Client Success Workspace"}</h1>
+              <p className="eyebrow">Productized Service Control Tower</p>
+              <h1>{state.config.client_metadata.company_name || "Owner Workspace"}</h1>
               <p className="objective">{state.config.client_metadata.primary_objective || ""}</p>
             </div>
           </div>
@@ -2390,11 +2390,11 @@ const App = () => {
         </div>
         <div className="header-meta-row">
           <div className="meta-chip">
-            <span>FDE Lead</span>
+            <span>Owner</span>
             <strong>{state.config.client_metadata.fde_lead || "—"}</strong>
           </div>
           <div className="meta-chip">
-            <span>Deployment timeline</span>
+            <span>Launch timeline</span>
             <strong>{state.config.client_metadata.deployment_timeline || "—"}</strong>
           </div>
           <div className="meta-chip role-chip">
@@ -2416,8 +2416,8 @@ const App = () => {
       <main className="layout">
         <aside className="sidebar">
           <div className="sidebar-header">
-            <h2>Control tower</h2>
-            <p>Operational dashboards & object views.</p>
+            <h2>Owner cockpit</h2>
+            <p>Lead, customer, and growth workflows.</p>
           </div>
           <nav>
             {NAV_ITEMS.map((item) => (
@@ -2432,11 +2432,11 @@ const App = () => {
           {activePage === "home" && (
             <section className="page active" data-page="home">
               <PageHeader
-                title="Home / Executive Summary"
-                description="Portfolio-level signals for renewal readiness, delivery reliability, and value realization."
+                title="Home / Owner Summary"
+                description="Lead conversion, activation progress, and profitability signals."
                 action={
                   <div className="page-actions">
-                    <div className="pill">Executive Summary</div>
+                    <div className="pill">Owner Summary</div>
                     <button
                       type="button"
                       className={`filter-chip ${homeTopRiskOnly ? "active" : ""}`}
@@ -2451,8 +2451,8 @@ const App = () => {
               <Card className="panel executive-brief">
                 <div className="executive-brief-header">
                   <div>
-                    <h3>Executive value brief</h3>
-                    <p>Board-ready summary of unit economics, exposure, and delivery focus.</p>
+                    <h3>Owner value brief</h3>
+                    <p>Owner-ready summary of unit economics, activation, and focus.</p>
                   </div>
                   <Badge variant="secondary">Auto-generated</Badge>
                 </div>
@@ -2483,12 +2483,12 @@ const App = () => {
               <div className="kpi-groups">
                 <div className="kpi-group">
                   <div className="kpi-group-header">
-                    <h3>Executive priorities</h3>
-                    <p>Revenue efficiency and exposure that drive board-level decisions.</p>
+                    <h3>Owner priorities</h3>
+                    <p>Revenue efficiency and exposure that drive owner decisions.</p>
                   </div>
                   <div className="kpi-row executive">
                     <KpiCard
-                      label="Portfolio LTV:CAC"
+                      label="Customer LTV:CAC"
                       value={portfolioLtvCacRatio ? `${portfolioLtvCacRatio}x` : "—"}
                       helper="Unit economics"
                     />
@@ -2509,23 +2509,23 @@ const App = () => {
                     <KpiCard
                       label="LTV at Risk"
                       value={`$${formatNumber(totalLtvAtRisk)}`}
-                      helper="Churn + renewal risk"
+                      helper="Churn + retention risk"
                     />
                     <KpiCard
                       label="Pipeline Risk Exposure"
                       value={`$${formatNumber(pipelineRiskExposure)}`}
-                      helper="Top 5 accounts above risk threshold"
+                      helper="Top 5 customers above risk threshold"
                     />
                   </div>
                 </div>
                 <div className="kpi-group">
                   <div className="kpi-group-header">
-                    <h3>Marketing ROI</h3>
+                    <h3>Segment ROI</h3>
                     <p>LTV:CAC efficiency and profit concentration by segment.</p>
                   </div>
                   <div className="kpi-row">
                     <KpiCard
-                      label="Portfolio LTV:CAC"
+                      label="Customer LTV:CAC"
                       value={portfolioLtvCacRatio ? `${portfolioLtvCacRatio}x` : "—"}
                     />
                     <KpiCard
@@ -2535,7 +2535,7 @@ const App = () => {
                     <KpiCard
                       label="ROI Coverage"
                       value={`${roiCoveragePct}%`}
-                      helper="Accounts with CAC + margin data"
+                      helper="Customers with CAC + margin data"
                     />
                     <KpiCard
                       label="Most Profitable Segment"
@@ -2578,39 +2578,39 @@ const App = () => {
                 </Card>
                 <div className="kpi-group">
                   <div className="kpi-group-header">
-                    <h3>Portfolio health</h3>
+                    <h3>Customer health</h3>
                     <p>Weighted score across health, risk, milestones, and outcomes.</p>
                   </div>
                   <div className="kpi-row">
                     <KpiCard
-                      label="Portfolio Health Score"
+                      label="Customer Health Score"
                       value={`${portfolioHealthScore}%`}
                       helper={<TrendIndicator value={portfolioHealthTrend} />}
                     />
-                    <KpiCard label="# Active Accounts" value={filteredAccounts.length} />
-                    <KpiCard label="Avg Account Health" value={avgHealth} />
+                    <KpiCard label="# Active Customers" value={filteredAccounts.length} />
+                    <KpiCard label="Avg Customer Health" value={avgHealth} />
                     <KpiCard label="Outcomes On Track" value={onTrackOutcomes} />
                   </div>
                 </div>
                 <div className="kpi-group">
                   <div className="kpi-group-header">
-                    <h3>Renewal risk</h3>
-                    <p>Exposure to renewal slippage across top accounts.</p>
+                    <h3>Retention risk</h3>
+                    <p>Exposure to retention slippage across top customers.</p>
                   </div>
                   <div className="kpi-row">
-                    <KpiCard label="Avg Renewal Risk" value={avgRisk} />
+                    <KpiCard label="Avg Retention Risk" value={avgRisk} />
                     <KpiCard
                       label="Pipeline Risk Exposure"
                       value={`$${formatNumber(pipelineRiskExposure)}`}
-                      helper="Top 5 accounts above risk threshold."
+                      helper="Top 5 customers above risk threshold."
                     />
-                    <KpiCard label="# Accounts Above Risk Threshold" value={accountsAboveRiskThreshold} />
+                    <KpiCard label="# Customers Above Risk Threshold" value={accountsAboveRiskThreshold} />
                   </div>
                 </div>
                 <div className="kpi-group">
                   <div className="kpi-group-header">
-                    <h3>Delivery & finance</h3>
-                    <p>Commitments and collections requiring escalation.</p>
+                    <h3>Activation & cashflow</h3>
+                    <p>Milestones and cashflow requiring escalation.</p>
                   </div>
                   <div className="kpi-row">
                     <KpiCard label="# At-Risk Milestones" value={atRiskMilestones} />
@@ -2620,9 +2620,9 @@ const App = () => {
                 </div>
               </div>
               <Card className="panel formula-card">
-                <h3>Portfolio health definition</h3>
+                <h3>Customer health definition</h3>
                 <p>
-                  Weighted score = 40% average health + 25% inverse renewal risk + 20% milestone reliability + 15%
+                  Weighted score = 40% average health + 25% inverse retention risk + 20% milestone reliability + 15%
                   outcome confidence. Reliability = 100 - (% milestones at risk).
                 </p>
                 <div className="formula-meta">
@@ -2631,15 +2631,15 @@ const App = () => {
                     <span>Due in ≤ {MILESTONE_AT_RISK_WINDOW_DAYS} days or flagged at risk.</span>
                   </div>
                   <div>
-                    <strong>Renewal risk threshold</strong>
-                    <span>Score ≥ {RENEWAL_RISK_THRESHOLD} triggers renewal risk alerts.</span>
+                    <strong>Retention risk threshold</strong>
+                    <span>Score ≥ {RENEWAL_RISK_THRESHOLD} triggers retention risk alerts.</span>
                   </div>
                 </div>
               </Card>
               <div className="visual-grid">
                 <ChartCard
                   title="Risk vs Value scatter"
-                  description="Renewal risk plotted against total contract value, colored by segment."
+                  description="Retention risk plotted against total contract value, colored by segment."
                 >
                   <RiskValueScatter
                     data={accountInsights.map(({ account, risk, segment }) => ({
@@ -2651,7 +2651,7 @@ const App = () => {
                   />
                 </ChartCard>
                 <ChartCard
-                  title="Portfolio health trend"
+                  title="Customer health trend"
                   description="Trailing six checkpoints (simulated from current health drivers)."
                 >
                   <HealthTrendChart
@@ -2671,20 +2671,20 @@ const App = () => {
                   <Card className="panel">
                     <div className="panel-header">
                       <div>
-                        <h3>Accounts needing attention</h3>
+                        <h3>Customers needing attention</h3>
                         <p>
                           {homeTopRiskOnly
-                            ? "Top 10 accounts by renewal risk score."
-                            : "Accounts above renewal or delivery risk thresholds."}
+                            ? "Top 10 customers by retention risk score."
+                            : "Customers above retention or activation risk thresholds."}
                         </p>
                       </div>
-                      <Badge variant="secondary">{attentionAccounts.length} accounts</Badge>
+                      <Badge variant="secondary">{attentionAccounts.length} customers</Badge>
                     </div>
                     <DataTable
                       columns={[
-                        "Account",
+                        "Customer",
                         "Health",
-                        "Renewal risk",
+                        "Retention risk",
                         "Alerts",
                         "Segment",
                         "Value",
@@ -2697,7 +2697,7 @@ const App = () => {
                           if (renewalRiskValue >= RENEWAL_RISK_THRESHOLD) {
                             alertBadges.push(
                               <Badge key="renewal" className="alert-badge" variant="secondary">
-                                Renewal risk
+                                Retention risk
                               </Badge>
                             );
                           }
@@ -2717,9 +2717,9 @@ const App = () => {
                           }
                           return {
                             key: account.account_id,
-                            Account: account.account_name,
+                            Customer: account.account_name,
                             Health: health?.value ?? account.health_score,
-                            "Renewal risk": renewalRiskValue,
+                            "Retention risk": renewalRiskValue,
                             Alerts: <div className="alert-badges">{alertBadges}</div>,
                             Segment: segment?.value ?? account.segment_tag,
                             Value: formatNumber(account.total_contract_value_to_date),
@@ -2736,7 +2736,7 @@ const App = () => {
                                     }
                                   }}
                                 >
-                                  Open exec brief
+                                  Open owner brief
                                 </Button>
                                 <Button
                                   size="sm"
@@ -2779,14 +2779,14 @@ const App = () => {
           {activePage === "portfolio" && (
             <section className="page active" data-page="portfolio">
               <PageHeader
-                title="Portfolio (Accounts)"
-                description="Monitor renewal readiness and value realization across the portfolio."
+                title="Customers"
+                description="Monitor activation, retention, and profitability across customers."
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">
-                <KpiCard label="# Accounts" value={accounts.length} />
+                <KpiCard label="# Customers" value={accounts.length} />
                 <KpiCard label="Avg Health" value={avgHealth} />
-                <KpiCard label="Avg Renewal Risk" value={avgRisk} />
+                <KpiCard label="Avg Retention Risk" value={avgRisk} />
                 <KpiCard label="Avg Churn Risk" value={avgChurnRisk} />
                 <KpiCard
                   label="Data Freshness"
@@ -2796,20 +2796,20 @@ const App = () => {
                 <KpiCard
                   label="LTV at Risk"
                   value={formatNumber(totalLtvAtRisk)}
-                  helper={`${missingDataAccounts} accounts with data gaps`}
+                  helper={`${missingDataAccounts} customers with data gaps`}
                 />
               </div>
               <Card className="panel">
                 <h3>Cohort metrics</h3>
-                <p className="help-text">Segment and region cohorts with deltas vs portfolio averages.</p>
+                <p className="help-text">Segment and region cohorts with deltas vs customer averages.</p>
                 <div className="cohort-grid">
                   <div>
                     <h4>Segment cohorts</h4>
-                    <DataTable columns={["Cohort", "Accounts", "Avg health", "Avg risk"]} rows={segmentCohortRows} />
+                    <DataTable columns={["Cohort", "Customers", "Avg health", "Avg risk"]} rows={segmentCohortRows} />
                   </div>
                   <div>
                     <h4>Regional cohorts</h4>
-                    <DataTable columns={["Cohort", "Accounts", "Avg health", "Avg risk"]} rows={regionCohortRows} />
+                    <DataTable columns={["Cohort", "Customers", "Avg health", "Avg risk"]} rows={regionCohortRows} />
                   </div>
                 </div>
               </Card>
@@ -2819,7 +2819,7 @@ const App = () => {
                 <DataTable
                   columns={[
                     "Segment",
-                    "Accounts",
+                    "Customers",
                     "Total gross profit",
                     "Profit share",
                     "CAC share",
@@ -2834,14 +2834,14 @@ const App = () => {
               <div className="visual-grid">
                 <ChartCard
                   title="Segment breakdown"
-                  description="Account mix with average health and renewal risk."
+                  description="Customer mix with average health and retention risk."
                 >
                   <div className="chart-breakdown">
                     {segmentBreakdown.map((segment) => (
                       <div key={segment.key} className="breakdown-row">
                         <div>
                           <strong>{segment.key}</strong>
-                          <span>{segment.count} accounts</span>
+                          <span>{segment.count} customers</span>
                         </div>
                         <div>
                           <StatusPill label={`H ${segment.avgHealthScore}`} tone={getHealthTone(segment.avgHealthScore)} />
@@ -2857,7 +2857,7 @@ const App = () => {
                       <div key={region.key} className="breakdown-row">
                         <div>
                           <strong>{region.key}</strong>
-                          <span>{region.count} accounts</span>
+                          <span>{region.count} customers</span>
                         </div>
                         <div>
                           <StatusPill label={`H ${region.avgHealthScore}`} tone={getHealthTone(region.avgHealthScore)} />
@@ -2869,13 +2869,13 @@ const App = () => {
                 </ChartCard>
                 <ChartCard
                   title="Health vs Risk Quadrant"
-                  description="Quadrant view of portfolio health vs renewal risk."
+                  description="Quadrant view of customer health vs retention risk."
                 />
               </div>
               <div className="module-grid">
                 <div className="module-main">
                   <Card className="panel">
-                    <h3>Accounts</h3>
+                    <h3>Customers</h3>
                     <div className="table-toolbar">
                       <div className="toolbar-group">
                         <div className="toolbar-block">
@@ -3005,7 +3005,7 @@ const App = () => {
                     <div className="table-actions">
                       <div>
                         <h4>Bulk actions</h4>
-                        <p className="help-text">Apply owner assignments or tasks to the selected accounts.</p>
+                        <p className="help-text">Apply owner assignments or tasks to the selected customers.</p>
                         <div className="button-row">
                           {portfolioBulkActions.map((action) => (
                             <Button
@@ -3048,13 +3048,13 @@ const App = () => {
           {activePage === "engagement-health" && (
             <section className="page active" data-page="engagement-health">
               <PageHeader
-                title="Engagement Health"
-                description="Active engagements with scope, owners, and renewal markers."
+                title="Activation Health"
+                description="Active activation plans with scope, owners, and retention markers."
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">
                 <KpiCard
-                  label="Engagement Health Score"
+                  label="Activation Health Score"
                   value={
                     engagements.length
                       ? Math.round(
@@ -3078,9 +3078,9 @@ const App = () => {
                       : 0
                   )}
                 />
-                <KpiCard label="Upcoming Renewal Date" value={formatDate(engagements[0]?.renewal_date)} />
+                <KpiCard label="Next Renewal Date" value={formatDate(engagements[0]?.renewal_date)} />
                 <KpiCard
-                  label="Sponsor Sentiment"
+                  label="Customer Sentiment"
                   value={formatPercent(
                     (state.instances.stakeholder || []).reduce(
                       (sum, stakeholder, index, list) => sum + Number(stakeholder.sentiment_score || 0) / list.length,
@@ -3117,7 +3117,7 @@ const App = () => {
                         <strong>{signal.owner || "—"}</strong>
                       </div>
                       <div className="summary-tile">
-                        <span className="label">Renewal</span>
+                        <span className="label">Retention</span>
                         <strong>{formatDate(signal.renewalDate)}</strong>
                       </div>
                       <div className="summary-tile">
@@ -3126,7 +3126,7 @@ const App = () => {
                         <span className="helper">{signal.highRisks.length} high severity</span>
                       </div>
                       <div className="summary-tile">
-                        <span className="label">Renewal forecast</span>
+                        <span className="label">Retention forecast</span>
                         <strong>{signal.renewalForecastScore}</strong>
                         <span className="helper">Composite score</span>
                       </div>
@@ -3160,19 +3160,19 @@ const App = () => {
                   title="Health Composition (Donut)"
                   description="Milestones, sentiment, risks, and scope signals."
                 />
-                <ChartCard title="Engagement Health Trend" description="Weekly score trend line over the last 90 days." />
+                <ChartCard title="Activation Health Trend" description="Weekly score trend line over the last 90 days." />
               </div>
               <div className="module-grid">
                 <div className="module-main">
                   <Card className="panel">
-                    <h3>Engagement health drivers</h3>
+                    <h3>Activation health drivers</h3>
                     <DataTable
-                      columns={["Engagement", "Milestones", "Sponsor sentiment", "Open risks", "Scope creep"]}
+                      columns={["Activation", "Milestones", "Customer sentiment", "Open risks", "Scope creep"]}
                       rows={engagementSignals.map((signal) => ({
                         key: `${signal.id}-drivers`,
-                        Engagement: signal.name,
+                        Activation: signal.name,
                         Milestones: formatPercent(signal.milestoneOnTimeRate),
-                        "Sponsor sentiment": formatPercent(signal.sentimentScore),
+                        "Customer sentiment": formatPercent(signal.sentimentScore),
                         "Open risks": `${signal.openRisks.length} (${signal.highRisks.length} high)`,
                         "Scope creep": signal.activeScopeChanges.length ? (
                           <Badge className="border border-rose-200 bg-rose-100 text-rose-800">Active</Badge>
@@ -3189,29 +3189,29 @@ const App = () => {
                     />
                   </Card>
                   <Card className="panel">
-                    <h3>Engagements</h3>
+                    <h3>Activations</h3>
                     <DataTable
                       columns={[
-                        "Engagement",
+                        "Activation",
                         "Status",
-                        "Renewal",
+                        "Retention",
                         "Health",
                         "Health status",
-                        "Renewal forecast",
+                        "Retention forecast",
                         "Scope creep",
                         "Completion",
                         "Action",
                       ]}
                       rows={engagementSignals.map((signal) => ({
                         key: signal.id,
-                        Engagement: signal.name,
+                        Activation: signal.name,
                         Status: signal.engagement.status,
-                        Renewal: formatDate(signal.renewalDate),
+                        Retention: formatDate(signal.renewalDate),
                         Health: signal.healthScore,
                         "Health status": (
                           <Badge className={signal.healthStatus.className}>{signal.healthStatus.label}</Badge>
                         ),
-                        "Renewal forecast": signal.renewalForecastScore,
+                        "Retention forecast": signal.renewalForecastScore,
                         "Scope creep": signal.activeScopeChanges.length ? (
                           <Badge className="border border-rose-200 bg-rose-100 text-rose-800">Active</Badge>
                         ) : (
@@ -3258,8 +3258,8 @@ const App = () => {
           {activePage === "delivery-reliability" && (
             <section className="page active" data-page="delivery-reliability">
               <PageHeader
-                title="Delivery Reliability"
-                description="Workstreams and milestones with delivery reliability signals."
+                title="Activation Milestones"
+                description="Workstreams and milestones with activation reliability signals."
                 action={
                   <div className="action-row">
                     {deliveryActions.map((action) => (
@@ -3395,8 +3395,8 @@ const App = () => {
           {activePage === "value-realization" && (
             <section className="page active" data-page="value-realization">
               <PageHeader
-                title="Value Realization"
-                description="Outcomes and KPI progress tied to value realization."
+                title="Profitability Insights"
+                description="Outcomes and KPI progress tied to retention and profit growth."
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">
@@ -3527,8 +3527,8 @@ const App = () => {
           {activePage === "risks-change-control" && (
             <section className="page active" data-page="risks-change-control">
               <PageHeader
-                title="Risks & Change Control"
-                description="Threats to delivery timelines and change requests."
+                title="Retention & Risks"
+                description="Threats to retention, activation, and delivery timelines."
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">
@@ -3617,12 +3617,12 @@ const App = () => {
           {activePage === "renewal-collections" && (
             <section className="page active" data-page="renewal-collections">
               <PageHeader
-                title="Renewal & Collections"
-                description="Upcoming renewals with invoice and payment signals."
+                title="Revenue & Retention"
+                description="Upcoming retention windows with invoice and payment signals."
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">
-                <KpiCard label="Renewals in 30/60/90 days" value={engagements.length} />
+                <KpiCard label="Retention in 30/60/90 days" value={engagements.length} />
                 <KpiCard label="Overdue invoices" value={overdueInvoices} />
                 <KpiCard
                   label="Total overdue amount"
@@ -3646,8 +3646,8 @@ const App = () => {
                 <KpiCard label="Payment failures" value={payments.filter((payment) => payment.status !== "Succeeded").length} />
               </div>
               <div className="visual-grid">
-                <ChartCard title="Renewal Timeline" />
-                <ChartCard title="Overdue by Account" />
+                <ChartCard title="Retention Timeline" />
+                <ChartCard title="Overdue by Customer" />
               </div>
               <div className="module-grid">
                 <div className="module-main">
@@ -3706,8 +3706,8 @@ const App = () => {
           {activePage === "governance" && (
             <section className="page active" data-page="governance">
               <PageHeader
-                title="Governance"
-                description="Governance cadence, decisions, and executive communications."
+                title="Operations"
+                description="Operating cadence, decisions, and owner communications."
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">
@@ -3789,8 +3789,8 @@ const App = () => {
           {activePage === "action-center" && (
             <section className="page active" data-page="action-center">
               <PageHeader
-                title="Action Center / Inbox"
-                description="Queues with governed actions and audit trails."
+                title="Next Steps / Inbox"
+                description="Queues with recommended next steps and audit trails."
               />
               <GlobalFiltersBar filters={filters} onChange={handleFilterChange} filterOptions={filterOptions} />
               <div className="kpi-row">
@@ -3873,7 +3873,7 @@ const App = () => {
           {activePage === "ontology-explorer" && (
             <section className="page active" data-page="ontology-explorer">
               <PageHeader
-                title="Ontology Explorer"
+                title="Data Model"
                 description="Explore object types, relationships, and module usage."
               />
               <div className="panel">
@@ -3922,8 +3922,8 @@ const App = () => {
           {activePage === "admin" && (
             <section className="page active" data-page="admin">
               <PageHeader
-                title="Admin / Settings"
-                description="Manage configuration, data integration, and audit history."
+                title="Settings"
+                description="Manage configuration, local data, and audit history."
               />
               <div className="panel">
                 <h3>Config metadata</h3>

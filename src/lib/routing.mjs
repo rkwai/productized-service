@@ -1,15 +1,15 @@
 export const NAV_ITEMS = [
-  { path: "home", label: "Home / Executive Summary" },
-  { path: "portfolio", label: "Portfolio (Accounts)" },
-  { path: "engagement-health", label: "Engagement Health" },
-  { path: "delivery-reliability", label: "Delivery Reliability" },
-  { path: "value-realization", label: "Value Realization" },
-  { path: "risks-change-control", label: "Risks & Change Control" },
-  { path: "renewal-collections", label: "Renewal & Collections" },
-  { path: "governance", label: "Governance" },
-  { path: "action-center", label: "Action Center / Inbox" },
-  { path: "ontology-explorer", label: "Ontology Explorer" },
-  { path: "admin", label: "Admin / Settings" },
+  { path: "home", label: "Home / Owner Summary" },
+  { path: "portfolio", label: "Customers" },
+  { path: "engagement-health", label: "Activation Health" },
+  { path: "delivery-reliability", label: "Activation Milestones" },
+  { path: "value-realization", label: "Profitability Insights" },
+  { path: "risks-change-control", label: "Retention & Risks" },
+  { path: "renewal-collections", label: "Revenue & Retention" },
+  { path: "governance", label: "Operations" },
+  { path: "action-center", label: "Next Steps / Inbox" },
+  { path: "ontology-explorer", label: "Data Model" },
+  { path: "admin", label: "Settings" },
 ];
 
 export const ROUTES = NAV_ITEMS.map((item) => item.path);
