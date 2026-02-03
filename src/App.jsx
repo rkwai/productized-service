@@ -1753,10 +1753,25 @@ const App = () => {
     }
   };
 
-  const handleReset = () => {
-    if (!window.confirm("Reset all local changes?")) return;
+  const handleReloadSeed = () => {
+    if (!window.confirm("Reload the seed dataset? This will overwrite local changes.")) return;
     clearState();
     window.location.reload();
+  };
+
+  const handleStartFresh = () => {
+    if (!state) return;
+    if (!window.confirm("Clear all instance data and start fresh?")) return;
+    applyUpdate((next) => {
+      next.instances = Object.fromEntries(
+        next.config.semantic_layer.object_types.map((objectType) => [objectType.id, []])
+      );
+      next.links = [];
+      next.derived_values = [];
+      next.action_log = [];
+      next.audit_log = [];
+      next.last_saved_at = null;
+    });
   };
 
   const handleDownload = () => {
@@ -6021,6 +6036,18 @@ const App = () => {
                   ))}
                 </div>
               </div>
+              <div className="panel">
+                <h3>Workspace data</h3>
+                <p className="help-text">
+                  Reload the demo seed data or clear everything to start with real records.
+                </p>
+                <div className="button-row">
+                  <Button onClick={handleReloadSeed}>Reload seed data</Button>
+                  <Button variant="ghost" onClick={handleStartFresh}>
+                    Start with empty data
+                  </Button>
+                </div>
+              </div>
               <section className="card" data-page="json-export">
                 <div className="card-header">
                   <h2>Current JSON</h2>
@@ -6044,9 +6071,6 @@ const App = () => {
                 />
                 <div className="button-row">
                   <Button onClick={handleDownload}>Download JSON</Button>
-                  <Button variant="ghost" onClick={handleReset}>
-                    Reset changes
-                  </Button>
                 </div>
               </section>
             </section>

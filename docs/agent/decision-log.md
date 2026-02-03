@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Add workspace data controls
+- Decision: Added Settings controls to reload seed data or clear all instance data while keeping config.
+- Alternatives considered: Keep only the reset button in JSON export; require manual local storage clearing.
+- Rationale: Switching between demo data and real data is a primary ICP need.
+- Implications: Empty data states may be more common; guide users toward import/quick add.
+- Follow-ups: Add an empty-state banner and suggested first actions.
+
 ## 2026-02-03 — Add lead attention filters + quick-add defaults
 - Decision: Added lead attention filters (missing next step/contact, stale, capture gaps) and pre-filled fields on quick-add.
 - Alternatives considered: Add a separate lead hygiene dashboard; keep filters limited to stage/status.

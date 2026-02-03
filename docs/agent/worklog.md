@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Added explicit workspace data controls to reload seed data or start with empty records.
+- Why: ICP needs a fast way to switch between demo data and real data entry.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Add a small banner when running with empty data to guide imports.
+
+## 2026-02-03
 - Outcome: Added lead attention filters and quick-add defaults to reduce capture friction.
 - Why: ICP needs to find missing next steps or stale leads immediately and avoid blank records.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.

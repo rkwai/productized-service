@@ -68,7 +68,10 @@ The latest focus decision appears in the Home → Segment ROI section.
 The **Spend recommendation** callout on Home summarizes the top segment to fund based on profit share and LTV:CAC.
 
 ## Reloading the seed dataset
-If you do not see the latest seed data, use **Settings → Reset changes** to clear local storage and reload the dataset from `src/data/seed-data.js`.
+If you do not see the latest seed data, use **Settings → Workspace data → Reload seed data** to clear local storage and reload the dataset from `src/data/seed-data.js`.
+
+## Starting with empty data
+Use **Settings → Workspace data → Start with empty data** to clear all instance records while keeping the configuration.
 
 ## Explainability
 Each derived score includes a panel describing the contributing signals and the timestamp of computation.

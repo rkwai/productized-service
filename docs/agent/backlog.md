@@ -24,6 +24,7 @@
 - [x] Add deal → customer conversion quick action.
 - [x] Auto-create onboarding activation plan when converting a deal.
 - [ ] Add lead attention summary card with one-click filter chips.
+- [ ] Add an empty-data banner with suggested first actions (import, add lead, add customer).
 
 ## P2 (later)
 - [ ] Package north-star-review skill into a distributable `.skill` if needed.
