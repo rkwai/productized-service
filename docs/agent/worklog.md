@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Refactored ontology config + seed data to add lead/deal objects and lifecycle fields while keeping legacy IDs intact.
+- Why: Align the data model with lead → activation → retention without breaking the current UI.
+- Key changes (files/areas): `public/docs/ontology-map.json`, `docs/ontology-map.json`, `src/data/initial-data.js`, `src/data/seed-data.js`, `docs/agent/backlog.md`, `docs/agent/decision-log.md`.
+- Tests: `npm run test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Surface leads/deals in the UI and define the import format.
+
+## 2026-02-03
 - Outcome: Refactored UI copy/navigation to align with the productized-service lead → activation → retention focus.
 - Why: Make the existing design consistent with the internal-launch goals before deeper data model changes.
 - Key changes (files/areas): `src/App.jsx`, `src/lib/routing.mjs`, `src/lib/executive-brief.js`, `docs/USER_GUIDE.md`.

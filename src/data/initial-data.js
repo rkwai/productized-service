@@ -4,24 +4,26 @@ export const initialData = {
     company_name: "{{COMPANY_NAME}}",
     fde_lead: "{{FDE_NAME}}",
     primary_objective:
-      "Increase renewal and expansion by improving milestone delivery reliability and measurable client outcomes (value realization) [User Query]",
-    deployment_timeline: "10-day rapid prototype",
+      "Convert leads, activate customers, and focus marketing on the most profitable segment (LTV:CAC).",
+    deployment_timeline: "1-week internal launch",
   },
   semantic_layer: {
     object_types: [
       {
         id: "client_account",
         description:
-          "Paying customer organization; anchor for revenue, engagement history, renewal likelihood, and realized value.",
+          "Paying customer organization; anchor for activation, retention, and unit economics.",
         properties: [
           "account_id",
           "account_name",
           "industry",
           "region",
           "account_status",
+          "lifecycle_stage",
           "created_date",
           "segment_tag",
           "health_score",
+          "activation_status",
           "renewal_risk_score",
           "total_contract_value_to_date",
           "estimated_ltv",
@@ -36,9 +38,57 @@ export const initialData = {
         },
       },
       {
+        id: "lead",
+        description:
+          "Prospective customer captured through outbound or inbound channels; tracked through lead lifecycle stages.",
+        properties: [
+          "lead_id",
+          "company_name",
+          "contact_name",
+          "contact_email",
+          "contact_title",
+          "phone",
+          "source",
+          "stage",
+          "status",
+          "created_date",
+          "last_contacted_at",
+          "owner_team_member_id",
+          "next_step_summary",
+          "expected_value",
+          "segment_candidate",
+          "notes",
+        ],
+        field_overrides: {
+          expected_value: "number",
+        },
+      },
+      {
+        id: "deal",
+        description:
+          "Commercial opportunity tied to a lead and optionally converted customer.",
+        properties: [
+          "deal_id",
+          "lead_id",
+          "account_id",
+          "deal_name",
+          "stage",
+          "status",
+          "amount",
+          "probability",
+          "expected_close_date",
+          "closed_date",
+          "next_step_summary",
+        ],
+        field_overrides: {
+          amount: "number",
+          probability: "number",
+        },
+      },
+      {
         id: "stakeholder",
         description:
-          "Client-side people involved in sponsorship, decision-making, sign-off, and success measurement.",
+          "Customer-side people involved in buying, onboarding, activation, and retention decisions.",
         properties: [
           "stakeholder_id",
           "account_id",
@@ -56,7 +106,7 @@ export const initialData = {
       {
         id: "team_member",
         description:
-          "Internal consulting team member. Used for ownership and accountability (not for hours/utilization).",
+          "Internal team member responsible for lead conversion, activation, and retention.",
         properties: [
           "team_member_id",
           "name",
@@ -69,7 +119,7 @@ export const initialData = {
       {
         id: "consulting_engagement",
         description:
-          "The active consulting relationship (program) with defined success criteria, governance cadence, and commercial terms.",
+          "Activation program with defined success criteria, cadence, and commercial terms.",
         properties: [
           "engagement_id",
           "account_id",
@@ -90,7 +140,7 @@ export const initialData = {
       {
         id: "statement_of_work",
         description:
-          "Contractual scope + assumptions + deliverables + milestone plan. Provides the baseline against which change requests are evaluated.",
+          "Activation scope + assumptions + deliverables + milestone plan used as the baseline for change requests.",
         properties: [
           "sow_id",
           "engagement_id",
@@ -106,7 +156,7 @@ export const initialData = {
       {
         id: "workstream",
         description:
-          "A strategic track within the engagement (e.g., Operating Model, Data Strategy, Change Management). Used to organize milestones and outcomes.",
+          "Activation track used to organize milestones and outcomes.",
         properties: [
           "workstream_id",
           "engagement_id",
@@ -119,7 +169,7 @@ export const initialData = {
       {
         id: "milestone",
         description:
-          "A committed checkpoint with explicit acceptance criteria and client sign-off. Primary unit for delivery performance.",
+          "Activation checkpoint with explicit acceptance criteria and customer sign-off.",
         properties: [
           "milestone_id",
           "workstream_id",
@@ -140,7 +190,7 @@ export const initialData = {
       {
         id: "deliverable",
         description:
-          "A tangible artifact shipped to the client (readout, roadmap, model, recommendation deck, implementation plan).",
+          "A tangible asset shipped to the customer (brief, plan, or activation artifact).",
         properties: [
           "deliverable_id",
           "milestone_id",
@@ -158,7 +208,7 @@ export const initialData = {
       {
         id: "task",
         description:
-          "A concrete task or follow-up required to advance a milestone or outcome.",
+          "A concrete task or follow-up required to advance a lead, milestone, or outcome.",
         properties: [
           "task_id",
           "engagement_id",
@@ -174,7 +224,7 @@ export const initialData = {
       {
         id: "decision",
         description:
-          "A formal client/program decision that unblocks progress or commits the client to a path (scope, prioritization, operating model, investment).",
+          "A formal customer decision that unblocks progress or commits to a path (scope, prioritization, investment).",
         properties: [
           "decision_id",
           "engagement_id",
@@ -190,7 +240,7 @@ export const initialData = {
       {
         id: "risk_issue",
         description:
-          "Risks and issues that threaten milestones or outcomes (dependencies, resourcing, stakeholder alignment, data access, change resistance).",
+          "Risks and issues that threaten activation or retention (dependencies, alignment, data access, change resistance).",
         properties: [
           "risk_issue_id",
           "engagement_id",
@@ -209,7 +259,7 @@ export const initialData = {
       {
         id: "change_request",
         description:
-          "Formal request to change scope/timeline/outputs relative to the SOW baseline (protects outcomes and delivery reliability).",
+          "Formal request to change scope/timeline/outputs relative to the activation plan baseline.",
         properties: [
           "change_request_id",
           "sow_id",
@@ -226,7 +276,7 @@ export const initialData = {
       {
         id: "outcome",
         description:
-          "A business result the engagement aims to achieve. Outcomes are measured via one or more KPIs and are central to renewal/expansion.",
+          "A customer result the activation program aims to achieve, measured via KPIs tied to retention and value.",
         properties: [
           "outcome_id",
           "engagement_id",
@@ -272,7 +322,7 @@ export const initialData = {
       {
         id: "meeting",
         description:
-          "Governance artifact (SteerCo, weekly status, working session) used to track cadence, alignment, and follow-through.",
+          "Operating cadence artifact (weekly status, working session) used to track alignment and follow-through.",
         properties: [
           "meeting_id",
           "engagement_id",
@@ -289,7 +339,7 @@ export const initialData = {
       {
         id: "invoice",
         description:
-          "Billing artifact supporting collections and renewal readiness signals (e.g., overdue invoices correlate with churn/renewal risk).",
+          "Billing artifact supporting collections and retention signals (e.g., overdue invoices correlate with churn risk).",
         properties: [
           "invoice_id",
           "account_id",
@@ -304,7 +354,7 @@ export const initialData = {
       {
         id: "payment",
         description:
-          "Cash collection events tied to invoices; includes failure reasons which can impact relationship health.",
+          "Cash collection events tied to invoices; includes failure reasons which can impact retention health.",
         properties: [
           "payment_id",
           "invoice_id",
@@ -321,31 +371,55 @@ export const initialData = {
         id: "account_has_stakeholder",
         from: "client_account",
         to: "stakeholder",
-        description: "Associates client stakeholders with the account.",
+        description: "Associates customer stakeholders with the account.",
+      },
+      {
+        id: "lead_converts_to_account",
+        from: "lead",
+        to: "client_account",
+        description: "Marks a lead that converted into a paying customer.",
+      },
+      {
+        id: "lead_has_deal",
+        from: "lead",
+        to: "deal",
+        description: "Connects a lead to its commercial opportunity.",
+      },
+      {
+        id: "deal_converts_to_account",
+        from: "deal",
+        to: "client_account",
+        description: "Connects a won deal to the resulting customer.",
+      },
+      {
+        id: "lead_has_task",
+        from: "lead",
+        to: "task",
+        description: "Tracks follow-up tasks needed to advance the lead.",
       },
       {
         id: "account_has_engagement",
         from: "client_account",
         to: "consulting_engagement",
-        description: "Connects the account to its engagements for lifecycle rollups.",
+        description: "Connects the customer to activation programs for lifecycle rollups.",
       },
       {
         id: "engagement_governed_by_sow",
         from: "consulting_engagement",
         to: "statement_of_work",
-        description: "Defines the contractual baseline scope and acceptance process.",
+        description: "Defines the activation baseline scope and acceptance process.",
       },
       {
         id: "engagement_has_workstream",
         from: "consulting_engagement",
         to: "workstream",
-        description: "Organizes delivery into strategic tracks.",
+        description: "Organizes activation into strategic tracks.",
       },
       {
         id: "workstream_has_milestone",
         from: "workstream",
         to: "milestone",
-        description: "Breaks work into committed checkpoints.",
+        description: "Breaks activation into committed checkpoints.",
       },
       {
         id: "milestone_produces_deliverable",
@@ -363,7 +437,7 @@ export const initialData = {
         id: "milestone_supports_outcome",
         from: "milestone",
         to: "outcome",
-        description: "Links milestones directly to the outcomes they unlock.",
+        description: "Links activation milestones directly to the outcomes they unlock.",
       },
       {
         id: "outcome_measured_by_metric",
@@ -375,7 +449,7 @@ export const initialData = {
         id: "outcome_has_task",
         from: "outcome",
         to: "task",
-        description: "Tracks follow-up tasks required to update or advance outcomes.",
+        description: "Tracks follow-up tasks required to advance outcomes.",
       },
       {
         id: "metric_has_snapshot",
@@ -387,7 +461,7 @@ export const initialData = {
         id: "engagement_has_meeting",
         from: "consulting_engagement",
         to: "meeting",
-        description: "Tracks governance cadence and alignment.",
+        description: "Tracks operating cadence and alignment.",
       },
       {
         id: "meeting_results_in_decision",
@@ -399,7 +473,7 @@ export const initialData = {
         id: "engagement_has_risk_issue",
         from: "consulting_engagement",
         to: "risk_issue",
-        description: "Central risk/issue log for delivery and outcome threats.",
+        description: "Central risk/issue log for activation and retention threats.",
       },
       {
         id: "sow_has_change_request",
@@ -411,7 +485,7 @@ export const initialData = {
         id: "engagement_billed_via_invoice",
         from: "consulting_engagement",
         to: "invoice",
-        description: "Connects engagement to billing artifacts for collections and renewal readiness.",
+        description: "Connects activation programs to billing artifacts for collections and retention readiness.",
       },
       {
         id: "invoice_paid_by_payment",
@@ -433,7 +507,7 @@ export const initialData = {
       {
         id: "calculate_engagement_health",
         logic:
-          "Health score derived from: milestone on-time rate + average milestone confidence + open high-severity risks + stakeholder sentiment + overdue invoice flags.",
+          "Activation health score derived from milestone on-time rate, confidence, open high-severity risks, stakeholder sentiment, and overdue invoice flags.",
         output: "derived_property:consulting_engagement.engagement_health_score",
       },
       {
@@ -463,19 +537,19 @@ export const initialData = {
       {
         id: "value_realization_signal",
         logic:
-          "Value realization = count(outcomes improving toward target) weighted by stakeholder sentiment and presence of signed-off deliverables supporting those outcomes.",
+          "Customer health signal = outcomes improving toward target weighted by sentiment and signed-off deliverables.",
         output: "derived_property:client_account.health_score",
       },
       {
         id: "renewal_risk_scoring",
         logic:
-          "Renewal risk model/heuristic using: engagement_health_score trend, missed milestones, unresolved high severity risks, negative sponsor sentiment, and collections issues near renewal_date.",
+          "Retention risk model using activation health trends, missed milestones, unresolved high severity risks, negative sentiment, and collections issues near retention dates.",
         output: "derived_property:client_account.renewal_risk_score",
       },
       {
         id: "segment_accounts_by_value_and_risk",
         logic:
-          "Segment by engagement_value / estimated_ltv and renewal_risk_score into cohorts (e.g., High value + High risk for executive attention).",
+          "Segment by engagement_value / estimated_ltv and retention risk score into cohorts (e.g., High value + High risk for owner attention).",
         output: "derived_property:client_account.segment_tag",
       },
     ],
@@ -483,7 +557,7 @@ export const initialData = {
       {
         id: "replan_milestone",
         description:
-          "Governed action to adjust milestone plan (due date, acceptance criteria, dependencies) with transparent rationale and client acknowledgment.",
+          "Adjust activation milestone plan (due date, acceptance criteria, dependencies) with transparent rationale and customer acknowledgment.",
         parameters: [
           "milestone_id",
           "new_due_date",
@@ -499,7 +573,7 @@ export const initialData = {
       {
         id: "schedule_steering_committee",
         description:
-          "Triggers an executive governance meeting when health declines or a key decision is blocked.",
+          "Triggers an owner check-in when activation health declines or a key decision is blocked.",
         parameters: [
           "engagement_id",
           "proposed_times",
@@ -531,7 +605,7 @@ export const initialData = {
       {
         id: "escalate_risk_issue",
         description:
-          "Escalates a high-severity risk/issue to sponsor with mitigation ask and decision request.",
+          "Escalates a high-severity risk/issue to the owner with mitigation ask and decision request.",
         parameters: [
           "risk_issue_id",
           "escalation_summary",
@@ -546,7 +620,7 @@ export const initialData = {
       {
         id: "initiate_change_request",
         description:
-          "Formalizes scope/timeline/fee changes when outcomes are threatened or assumptions change.",
+          "Formalizes scope/timeline/fee changes when activation outcomes are threatened.",
         parameters: [
           "sow_id",
           "description",
@@ -563,7 +637,7 @@ export const initialData = {
       {
         id: "publish_exec_readout",
         description:
-          "Generates and distributes an executive update: milestones, risks, decisions needed, and outcome/KPI progress.",
+          "Generates and distributes an owner update: milestones, risks, decisions needed, and KPI progress.",
         parameters: [
           "engagement_id",
           "reporting_period_start",
@@ -579,7 +653,7 @@ export const initialData = {
       {
         id: "run_value_realization_workshop",
         description:
-          "Aligns stakeholders on outcome definitions, KPI baselines, targets, and evidence sources to make value measurable and defensible.",
+          "Aligns stakeholders on outcome definitions, KPI baselines, targets, and evidence sources to make activation value measurable.",
         parameters: [
           "engagement_id",
           "outcome_ids",
@@ -613,15 +687,16 @@ export const initialData = {
   },
   data_integration_mapping: {
     sources: [
-      "CRM (Salesforce/HubSpot) -> client_account, stakeholder, consulting_engagement (commercial metadata)",
-      "Document repositories (Google Drive/SharePoint/Confluence) -> deliverable.evidence_link, statement_of_work, exec readouts",
-      "Project/Governance tools (Asana/Jira/Smartsheet) -> workstream, milestone, risk_issue, change_request",
-      "Comms/Calendar (Google Calendar/Outlook, Teams/Slack) -> meeting metadata + governance cadence signals",
-      "Survey/Feedback (Qualtrics/Delighted/Forms) -> stakeholder sentiment, deliverable quality feedback",
-      "Billing/Finance (Stripe/NetSuite/QuickBooks) -> invoice, payment",
-      "Client KPI sources (client BI dashboards, exports, agreed system-of-record) -> kpi_snapshot",
+      "Lead intake (forms/CSV imports) -> lead, deal",
+      "CRM (optional) -> client_account, stakeholder, consulting_engagement (commercial metadata)",
+      "Document repositories -> deliverable.evidence_link, statement_of_work, owner readouts",
+      "Project tools -> workstream, milestone, risk_issue, change_request",
+      "Comms/Calendar -> meeting metadata + operating cadence signals",
+      "Survey/Feedback -> stakeholder sentiment, deliverable quality feedback",
+      "Billing/Finance -> invoice, payment, gross_margin_pct, avg_monthly_revenue",
+      "KPI sources -> kpi_snapshot",
     ],
     pipeline_tool:
-      "Pipeline Builder for automated semantic hydration with incremental syncs (milestones, deliverables, risks, KPI snapshots) and document metadata extraction",
+      "Local import pipeline for CSV/JSON with optional syncs later",
   },
 };

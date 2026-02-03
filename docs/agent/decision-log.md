@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Add lead/deal objects without renaming legacy IDs
+- Decision: Added lead/deal objects and lifecycle fields while keeping existing object IDs/field names (client_account, consulting_engagement, renewal_risk_score).
+- Alternatives considered: Rename object types and fields to customer/activation/retention; postpone data model changes until UI refactor.
+- Rationale: Preserve current UI functionality and avoid breaking derived logic while introducing the lead lifecycle.
+- Implications: Legacy IDs remain in code; future cleanup should rename once UI/model refactor is planned.
+- Follow-ups: Consider renaming object IDs/fields when UI and derived logic are updated together.
+
 ## 2026-02-03 — Reframe UI copy to customer/activation/retention language
 - Decision: Updated navigation and UI copy to reflect lead → activation → retention focus without altering underlying data logic.
 - Alternatives considered: Wait until data model changes were complete; keep legacy account/renewal language until beta.

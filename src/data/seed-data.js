@@ -6,6 +6,18 @@ const addMonths = (year, month, add) => {
   return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1 };
 };
 
+const getLifecycleStage = (account) => {
+  if (account.health_score >= 75) return "Retained";
+  if (account.health_score >= 60) return "Activated";
+  return "Onboarded";
+};
+
+const getActivationStatus = (account) => {
+  if (account.renewal_risk_score >= 65) return "At risk";
+  if (account.health_score >= 70) return "On track";
+  return "In progress";
+};
+
 const teamMembers = [
   {
     team_member_id: "tm_001",
@@ -685,9 +697,11 @@ const client_account = accountProfiles.map((account) => ({
   industry: account.industry,
   region: account.region,
   account_status: "Active",
+  lifecycle_stage: getLifecycleStage(account),
   created_date: account.created_date,
   segment_tag: account.segment_tag,
   health_score: account.health_score,
+  activation_status: getActivationStatus(account),
   renewal_risk_score: account.renewal_risk_score,
   total_contract_value_to_date: account.total_contract_value_to_date,
   estimated_ltv: account.estimated_ltv,
@@ -695,6 +709,132 @@ const client_account = accountProfiles.map((account) => ({
   avg_monthly_revenue: account.avg_monthly_revenue,
   gross_margin_pct: account.gross_margin_pct,
 }));
+
+const openLeads = [
+  {
+    lead_id: "lead_lumen",
+    company_name: "Lumen Studio",
+    contact_name: "Jade Martin",
+    contact_email: "jade@lumen.studio",
+    contact_title: "Founder",
+    phone: "",
+    source: "Inbound",
+    stage: "Qualified",
+    status: "Open",
+    created_date: toDate(2024, 11, 12),
+    last_contacted_at: toDate(2024, 11, 18),
+    owner_team_member_id: teamMembers[0].team_member_id,
+    next_step_summary: "Schedule discovery call",
+    expected_value: 120000,
+    segment_candidate: "Growth",
+    notes: "Interested in fractional product leadership package.",
+  },
+  {
+    lead_id: "lead_cascade",
+    company_name: "Cascade Health",
+    contact_name: "Rina Patel",
+    contact_email: "rina@cascade.health",
+    contact_title: "COO",
+    phone: "",
+    source: "Referral",
+    stage: "Proposal",
+    status: "Open",
+    created_date: toDate(2024, 10, 28),
+    last_contacted_at: toDate(2024, 11, 8),
+    owner_team_member_id: teamMembers[1].team_member_id,
+    next_step_summary: "Send activation plan proposal",
+    expected_value: 180000,
+    segment_candidate: "Strategic",
+    notes: "Asked for onboarding + retention playbook.",
+  },
+  {
+    lead_id: "lead_summitworks",
+    company_name: "Summit Works",
+    contact_name: "Luis Romero",
+    contact_email: "luis@summitworks.io",
+    contact_title: "CEO",
+    phone: "",
+    source: "Outbound",
+    stage: "Negotiation",
+    status: "Open",
+    created_date: toDate(2024, 10, 5),
+    last_contacted_at: toDate(2024, 11, 2),
+    owner_team_member_id: teamMembers[2].team_member_id,
+    next_step_summary: "Finalize scope and pricing",
+    expected_value: 240000,
+    segment_candidate: "Scale",
+    notes: "Wants KPI-driven activation milestones.",
+  },
+  {
+    lead_id: "lead_foundry",
+    company_name: "Foundry Labs",
+    contact_name: "Maya Chen",
+    contact_email: "maya@foundrylabs.co",
+    contact_title: "Head of Product",
+    phone: "",
+    source: "Inbound",
+    stage: "Lead",
+    status: "Open",
+    created_date: toDate(2024, 11, 20),
+    last_contacted_at: toDate(2024, 11, 22),
+    owner_team_member_id: teamMembers[3].team_member_id,
+    next_step_summary: "Qualify goals and timeline",
+    expected_value: 90000,
+    segment_candidate: "Growth",
+    notes: "Early-stage productized service team.",
+  },
+];
+
+const lead = [
+  ...accountProfiles.map((account, index) => ({
+    lead_id: `lead_${account.account_id}`,
+    company_name: account.account_name,
+    contact_name: account.sponsor.name,
+    contact_email: account.sponsor.email,
+    contact_title: account.sponsor.title,
+    phone: "",
+    source: index % 2 === 0 ? "Referral" : "Inbound",
+    stage: "Won",
+    status: "Converted",
+    created_date: account.created_date,
+    last_contacted_at: account.sponsor.last_contacted_at,
+    owner_team_member_id: teamMembers[index % teamMembers.length].team_member_id,
+    next_step_summary: "Kick off activation plan",
+    expected_value: account.total_contract_value_to_date,
+    segment_candidate: account.segment_tag,
+    notes: "Converted to customer.",
+  })),
+  ...openLeads,
+];
+
+const deal = [
+  ...accountProfiles.map((account) => ({
+    deal_id: `deal_${account.account_id}`,
+    lead_id: `lead_${account.account_id}`,
+    account_id: account.account_id,
+    deal_name: `${account.account_name} Retainer`,
+    stage: "Closed Won",
+    status: "Won",
+    amount: account.total_contract_value_to_date,
+    probability: 0.9,
+    expected_close_date: account.start_date,
+    closed_date: account.start_date,
+    next_step_summary: "Finalize onboarding plan",
+  })),
+  ...openLeads.map((entry, index) => ({
+    deal_id: `deal_${entry.lead_id}`,
+    lead_id: entry.lead_id,
+    account_id: "",
+    deal_name: `${entry.company_name} Activation`,
+    stage: entry.stage === "Proposal" ? "Proposal" : entry.stage === "Negotiation" ? "Negotiation" : "Discovery",
+    status: "Open",
+    amount: entry.expected_value,
+    probability: 0.35 + (index * 0.1),
+    expected_close_date: toDate(2024, 12, 15 + index),
+    closed_date: "",
+    next_step_summary: entry.next_step_summary,
+  })),
+];
 
 const stakeholder = [];
 const consulting_engagement = [];
@@ -996,6 +1136,8 @@ accountProfiles.forEach((account, index) => {
 
 export const seedInstances = {
   client_account,
+  lead,
+  deal,
   stakeholder,
   team_member: teamMembers,
   consulting_engagement,
@@ -1034,9 +1176,14 @@ accountProfiles.forEach((account) => {
   const outcomeId = `out_${account.account_id}`;
   const metricId = `metric_${account.account_id}`;
   const snapshotId = `snap_${account.account_id}`;
+  const leadId = `lead_${account.account_id}`;
+  const dealId = `deal_${account.account_id}`;
 
   addLink("account_has_stakeholder", account.account_id, execId);
   addLink("account_has_stakeholder", account.account_id, ownerId);
+  addLink("lead_converts_to_account", leadId, account.account_id);
+  addLink("lead_has_deal", leadId, dealId);
+  addLink("deal_converts_to_account", dealId, account.account_id);
   addLink("account_has_engagement", account.account_id, engagementId);
   addLink("outcome_measured_by_metric", outcomeId, metricId);
   addLink("metric_has_snapshot", metricId, snapshotId);
@@ -1069,6 +1216,10 @@ accountProfiles.forEach((account) => {
       addLink("deliverable_supports_outcome", deliverableId, outcomeId);
     }
   });
+});
+
+openLeads.forEach((leadItem) => {
+  addLink("lead_has_deal", leadItem.lead_id, `deal_${leadItem.lead_id}`);
 });
 
 export { seedLinks };

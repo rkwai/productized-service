@@ -8,7 +8,7 @@
 - [ ] Decide the import format + validation rules for Feb 10.
 - [ ] Confirm secondary KPIs beyond LTV:CAC (activation rate, retention, conversion).
 - [ ] Refactor existing account-portfolio UX/data model to align with lead lifecycle and activation goals.
-- [ ] Update ontology config + seed data to include Lead/Customer/Deal objects and lifecycle stages.
+- [x] Update ontology config + seed data to include Lead/Customer/Deal objects and lifecycle stages.
 
 ## P1 (soon)
 - [ ] Add copy/export action for the executive value brief (board-ready readout).
