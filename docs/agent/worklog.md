@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Removed the repo-local `north-star-review` skill copy to avoid duplication with the global install.
+- Why: Keep only the global `~/.codex/skills/north-star-review` version as requested.
+- Key changes (files/areas): `.codex/skills/north-star-review/` (deleted).
+- Tests: Not run (skill removal only).
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
+## 2026-02-03
 - Outcome: Synced `north-star-review` into the global Codex skills directory for cross-repo access.
 - Why: Make the skill available in all repos without packaging.
 - Key changes (files/areas): `~/.codex/skills/north-star-review/`.

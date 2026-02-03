@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Remove repo-local north-star-review skill
+- Decision: Deleted `.codex/skills/north-star-review` from the repo and kept only the global `~/.codex/skills/north-star-review` copy.
+- Alternatives considered: Keep both copies and periodically sync; keep repo-local only.
+- Rationale: Avoid duplicate skill definitions and honor the request to keep only the global install.
+- Implications: Future updates to the skill should be made in the global location unless reintroduced in-repo.
+- Follow-ups: None.
+
 ## 2026-02-03 — Install north-star-review globally
 - Decision: Copied `north-star-review` into `~/.codex/skills` for cross-repo access.
 - Alternatives considered: Package as a `.skill` file or keep repo-local only.
