@@ -84,6 +84,12 @@ const daysSince = (value) => {
   if (Number.isNaN(parsed.getTime())) return null;
   return Math.max(0, Math.round((Date.now() - parsed.getTime()) / (1000 * 60 * 60 * 24)));
 };
+const addDays = (base, days) => {
+  const date = new Date(base);
+  if (Number.isNaN(date.getTime())) return "";
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split("T")[0];
+};
 const getHealthTone = (value) => {
   if (!Number.isFinite(value)) return "status-pill--neutral";
   if (value >= 75) return "status-pill--good";
@@ -1274,7 +1280,12 @@ const App = () => {
   const [portfolioFilters, setPortfolioFilters] = useState(PORTFOLIO_VIEW_PRESETS[0].filters);
   const [portfolioColumns, setPortfolioColumns] = useState(PORTFOLIO_VIEW_PRESETS[0].columns);
   const [selectedPortfolioAccounts, setSelectedPortfolioAccounts] = useState([]);
-  const [leadFilters, setLeadFilters] = useState({ search: "", stage: "all", status: "all" });
+  const [leadFilters, setLeadFilters] = useState({
+    search: "",
+    stage: "all",
+    status: "all",
+    attention: "all",
+  });
   const [dealFilters, setDealFilters] = useState({ search: "", stage: "all", status: "all" });
   const [importTarget, setImportTarget] = useState("lead");
   const [importText, setImportText] = useState("");
@@ -1376,6 +1387,33 @@ const App = () => {
       const objectType = next.config.semantic_layer.object_types.find((t) => t.id === objectTypeId);
       if (!objectType) return;
       const record = createEmptyRecord(objectType);
+      const todayIso = new Date().toISOString().split("T")[0];
+      const teamMembers = next.instances.team_member || [];
+      const ownerId =
+        teamMembers.find((member) => member.active_flag)?.team_member_id ||
+        teamMembers[0]?.team_member_id ||
+        "";
+      if (objectTypeId === "lead") {
+        record.stage = "Lead";
+        record.status = "Open";
+        record.created_date = todayIso;
+        record.last_contacted_at = todayIso;
+        record.owner_team_member_id = ownerId;
+        record.next_step_summary = record.next_step_summary || "Define next step";
+      }
+      if (objectTypeId === "deal") {
+        record.stage = "Discovery";
+        record.status = "Open";
+        record.expected_close_date = addDays(todayIso, 30);
+        record.probability = record.probability || 0.3;
+        record.deal_name = record.deal_name || "New deal";
+      }
+      if (objectTypeId === "client_account") {
+        record.account_status = "Active";
+        record.lifecycle_stage = "Onboarded";
+        record.activation_status = "On track";
+        record.created_date = todayIso;
+      }
       if (!next.instances[objectTypeId]) {
         next.instances[objectTypeId] = [];
       }
@@ -3086,11 +3124,18 @@ const App = () => {
 
   const leadStageOptions = Array.from(new Set(leads.map((lead) => lead.stage))).filter(Boolean);
   const leadStatusOptions = Array.from(new Set(leads.map((lead) => lead.status))).filter(Boolean);
+  const leadAttentionOptions = [
+    { label: "All", value: "all" },
+    { label: "Missing next step", value: "missing_next_step" },
+    { label: "Missing contact", value: "missing_contact" },
+    { label: "Stale outreach", value: "stale" },
+    { label: "Capture gaps", value: "gaps" },
+  ];
   const dealStageOptions = Array.from(new Set(deals.map((deal) => deal.stage))).filter(Boolean);
   const dealStatusOptions = Array.from(new Set(deals.map((deal) => deal.status))).filter(Boolean);
 
   const normalizedLeadSearch = leadFilters.search.trim().toLowerCase();
-  const filteredLeads = leads.filter((lead) => {
+  const baseFilteredLeads = leads.filter((lead) => {
     if (leadFilters.stage !== "all" && lead.stage !== leadFilters.stage) return false;
     if (leadFilters.status !== "all" && lead.status !== leadFilters.status) return false;
     if (!normalizedLeadSearch) return true;
@@ -3109,7 +3154,7 @@ const App = () => {
       .toLowerCase();
     return haystack.includes(normalizedLeadSearch);
   });
-  const leadCaptureSignals = filteredLeads.map((lead) => {
+  const leadCaptureSignals = baseFilteredLeads.map((lead) => {
     const missingFields = getMissingLeadFields(lead);
     const staleDays = daysSince(lead.last_contacted_at);
     return {
@@ -3121,6 +3166,21 @@ const App = () => {
       isStale: Number.isFinite(staleDays) && staleDays >= LEAD_STALE_DAYS,
     };
   });
+  const visibleLeadSignals = leadCaptureSignals.filter((signal) => {
+    switch (leadFilters.attention) {
+      case "missing_next_step":
+        return signal.missingNextStep;
+      case "missing_contact":
+        return signal.missingContact;
+      case "stale":
+        return signal.isStale;
+      case "gaps":
+        return signal.missingFields.length > 0;
+      default:
+        return true;
+    }
+  });
+  const filteredLeads = visibleLeadSignals.map((signal) => signal.lead);
 
   const normalizedDealSearch = dealFilters.search.trim().toLowerCase();
   const filteredDeals = deals.filter((deal) => {
@@ -3152,10 +3212,10 @@ const App = () => {
     (sum, lead) => sum + (Number(lead.expected_value) || 0),
     0
   );
-  const leadIncompleteCount = leadCaptureSignals.filter((item) => item.missingFields.length).length;
-  const leadMissingContactCount = leadCaptureSignals.filter((item) => item.missingContact).length;
-  const leadMissingNextStepCount = leadCaptureSignals.filter((item) => item.missingNextStep).length;
-  const leadStaleCount = leadCaptureSignals.filter((item) => item.isStale).length;
+  const leadIncompleteCount = visibleLeadSignals.filter((item) => item.missingFields.length).length;
+  const leadMissingContactCount = visibleLeadSignals.filter((item) => item.missingContact).length;
+  const leadMissingNextStepCount = visibleLeadSignals.filter((item) => item.missingNextStep).length;
+  const leadStaleCount = visibleLeadSignals.filter((item) => item.isStale).length;
 
   const openDealCount = filteredDeals.filter(
     (deal) => (deal.status || "").toLowerCase() === "open"
@@ -4209,6 +4269,26 @@ const App = () => {
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="toolbar-block">
+                          <span>Attention</span>
+                          <Select
+                            value={leadFilters.attention}
+                            onValueChange={(value) =>
+                              setLeadFilters((prev) => ({ ...prev, attention: value }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="All leads" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {leadAttentionOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
                     <DataTable
@@ -4224,7 +4304,7 @@ const App = () => {
                         "Source",
                         "Quick actions",
                       ]}
-                      rows={leadCaptureSignals.map(({ lead, missingFields, isStale }) => {
+                      rows={visibleLeadSignals.map(({ lead, missingFields, isStale }) => {
                         const existingDeal = dealsByLeadId.get(lead.lead_id)?.[0];
                         return {
                           key: lead.lead_id,

@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Add lead attention filters + quick-add defaults
+- Decision: Added lead attention filters (missing next step/contact, stale, capture gaps) and pre-filled fields on quick-add.
+- Alternatives considered: Add a separate lead hygiene dashboard; keep filters limited to stage/status.
+- Rationale: ICP needs to prioritize follow-up gaps without wading through full lead lists.
+- Implications: KPI counts now reflect the filtered lead subset.
+- Follow-ups: Consider a lead hygiene summary card with one-click filters.
+
 ## 2026-02-03 — Auto-create onboarding plan on deal conversion
 - Decision: Generate a consulting engagement, workstreams, and milestones automatically when a deal converts to a customer.
 - Alternatives considered: Prompt the user to configure onboarding manually; create only a placeholder engagement.

@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Added lead attention filters and quick-add defaults to reduce capture friction.
+- Why: ICP needs to find missing next steps or stale leads immediately and avoid blank records.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Add a lead attention summary card with one-click filter chips.
+
+## 2026-02-03
 - Outcome: Clarified marketing focus as an action by showing the latest focus in Home’s ROI section.
 - Why: Make the decision visible without treating it as a workflow.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.

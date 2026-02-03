@@ -23,6 +23,7 @@
 - [x] Add one-click lead conversion (lead → deal) from the pipeline view.
 - [x] Add deal → customer conversion quick action.
 - [x] Auto-create onboarding activation plan when converting a deal.
+- [ ] Add lead attention summary card with one-click filter chips.
 
 ## P2 (later)
 - [ ] Package north-star-review skill into a distributable `.skill` if needed.
