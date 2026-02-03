@@ -17,7 +17,7 @@
 - [ ] Define sprint goals cadence and critical-path dependencies.
 - [x] Update unit test runner to execute all files in `tests/unit`.
 - [ ] Add import preview/mapping UX (field mapping + error surfacing).
-- [ ] Tune decision-engine scoring and map recommendations to workflows.
+- [x] Tune decision-engine scoring and map recommendations to workflows.
 
 ## P2 (later)
 - [ ] Package north-star-review skill into a distributable `.skill` if needed.

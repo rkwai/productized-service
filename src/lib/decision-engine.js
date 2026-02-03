@@ -1,5 +1,13 @@
 const STALE_LEAD_DAYS = 14;
 const CLOSE_SOON_DAYS = 14;
+const LEAD_STALE_BOOST = 0.2;
+const LEAD_NO_NEXT_STEP_BOOST = 0.1;
+const DEAL_CLOSE_BOOST = 1.2;
+const ACCOUNT_RISK_WEIGHT = 2000;
+const ACCOUNT_DATA_GAP_WEIGHT = 5000;
+const ACCOUNT_ACTIVATION_RISK_BONUS = 50000;
+const ACCOUNT_ONBOARDED_BONUS = 20000;
+const ACCOUNT_RETENTION_RISK_THRESHOLD = 70;
 const LEAD_STAGE_WEIGHT = {
   Lead: 0.35,
   Qualified: 0.55,
@@ -49,22 +57,32 @@ const buildLeadRecommendation = (lead, now) => {
   const stageWeight = LEAD_STAGE_WEIGHT[lead.stage] ?? 0.4;
   const staleDays = daysSince(lead.last_contacted_at, now);
   const hasNextStep = Boolean(lead.next_step_summary);
+  const workflowParams = {
+    lead_id: lead.lead_id,
+    next_step_summary: lead.next_step_summary || "",
+    target_date: "",
+  };
 
   let action = "Advance lead";
+  const workflowId = "follow_up_lead";
   if (!hasNextStep) {
     action = "Define the next step";
   } else if (staleDays != null && staleDays >= STALE_LEAD_DAYS) {
     action = "Re-engage the lead";
   } else if (["Proposal", "Negotiation"].includes(lead.stage)) {
-    action = "Close the decision";
+    action = "Secure the decision";
   } else if (lead.stage === "Lead") {
     action = "Qualify the lead";
   }
+  if (!workflowParams.next_step_summary) {
+    workflowParams.next_step_summary = action;
+  }
 
   const baseValue = expectedValue * stageWeight;
-  const stalenessBoost = staleDays != null && staleDays >= STALE_LEAD_DAYS ? expectedValue * 0.15 : 0;
-  const nextStepPenalty = hasNextStep ? 0 : expectedValue * 0.1;
-  const score = Math.round(baseValue + stalenessBoost + nextStepPenalty);
+  const stalenessBoost =
+    staleDays != null && staleDays >= STALE_LEAD_DAYS ? expectedValue * LEAD_STALE_BOOST : 0;
+  const nextStepBoost = hasNextStep ? 0 : expectedValue * LEAD_NO_NEXT_STEP_BOOST;
+  const score = Math.round(baseValue + stalenessBoost + nextStepBoost);
 
   const urgency =
     staleDays != null && staleDays >= STALE_LEAD_DAYS ? `Last touch ${staleDays}d ago` : `Stage: ${lead.stage || "Lead"}`;
@@ -78,6 +96,8 @@ const buildLeadRecommendation = (lead, now) => {
     reason: urgency,
     valueAtStake: expectedValue,
     score,
+    workflowId,
+    workflowParams,
   };
 };
 
@@ -89,15 +109,24 @@ const buildDealRecommendation = (deal, now) => {
   const probability = toNumber(deal.probability) || 0.3;
   const stageWeight = DEAL_STAGE_WEIGHT[deal.stage] ?? 0.65;
   const closeInDays = daysUntil(deal.expected_close_date, now);
-  const closeBoost = closeInDays != null && closeInDays <= CLOSE_SOON_DAYS ? 1.2 : 1;
+  const closeBoost = closeInDays != null && closeInDays <= CLOSE_SOON_DAYS ? DEAL_CLOSE_BOOST : 1;
+  const workflowParams = {
+    deal_id: deal.deal_id,
+    close_plan_summary: deal.next_step_summary || "",
+    expected_close_date: deal.expected_close_date || "",
+  };
 
   let action = "Advance the deal";
+  const workflowId = "advance_deal";
   if (closeInDays != null && closeInDays <= CLOSE_SOON_DAYS) {
     action = "Prepare close plan";
   } else if (probability < 0.4) {
     action = "Improve win odds";
   } else if (deal.stage === "Proposal") {
     action = "Lock proposal feedback";
+  }
+  if (!workflowParams.close_plan_summary) {
+    workflowParams.close_plan_summary = action;
   }
 
   const weightedValue = amount * probability * stageWeight;
@@ -116,6 +145,8 @@ const buildDealRecommendation = (deal, now) => {
     reason: urgency,
     valueAtStake: amount * probability,
     score,
+    workflowId,
+    workflowParams,
   };
 };
 
@@ -130,21 +161,48 @@ const buildAccountRecommendation = (account, getDerivedValue) => {
   const missingFields =
     getDerivedValue("client_account", account.account_id, "missing_data_fields") || [];
   const missingCount = Array.isArray(missingFields) ? missingFields.length : 0;
+  const actionable =
+    activationStatus === "at risk" ||
+    lifecycleStage === "Onboarded" ||
+    renewalRisk >= ACCOUNT_RETENTION_RISK_THRESHOLD ||
+    missingCount > 0;
+  if (!actionable) return null;
+
+  const workflowParams = {
+    account_id: account.account_id,
+    target_date: "",
+  };
 
   let action = "Maintain momentum";
+  let workflowId = "drive_activation_milestones";
   if (activationStatus === "at risk") {
     action = "Recover activation";
+    workflowId = "recover_activation";
   } else if (lifecycleStage === "Onboarded") {
     action = "Drive activation milestones";
+    workflowId = "drive_activation_milestones";
   } else if (renewalRisk >= 70) {
     action = "Run retention plan";
+    workflowId = "run_retention_plan";
   } else if (missingCount > 0) {
     action = "Fill data gaps";
+    workflowId = "resolve_account_data_gaps";
+  }
+  if (workflowId === "recover_activation") {
+    workflowParams.recovery_plan_summary = action;
+  } else if (workflowId === "drive_activation_milestones") {
+    workflowParams.milestone_summary = action;
+  } else if (workflowId === "run_retention_plan") {
+    workflowParams.risk_summary = action;
+  } else if (workflowId === "resolve_account_data_gaps") {
+    workflowParams.fields_needed = missingFields?.slice?.(0, 3)?.join(", ") || action;
   }
 
-  const riskBonus = renewalRisk * 1000;
-  const dataPenalty = missingCount * 5000;
-  const score = Math.round(ltvAtRisk + riskBonus + dataPenalty);
+  const riskBonus = renewalRisk * ACCOUNT_RISK_WEIGHT;
+  const dataPenalty = missingCount * ACCOUNT_DATA_GAP_WEIGHT;
+  const activationBonus = activationStatus === "at risk" ? ACCOUNT_ACTIVATION_RISK_BONUS : 0;
+  const onboardingBonus = lifecycleStage === "Onboarded" ? ACCOUNT_ONBOARDED_BONUS : 0;
+  const score = Math.round(ltvAtRisk + riskBonus + dataPenalty + activationBonus + onboardingBonus);
 
   let urgency = "Healthy";
   if (activationStatus === "at risk") {
@@ -164,6 +222,8 @@ const buildAccountRecommendation = (account, getDerivedValue) => {
     reason: urgency,
     valueAtStake: ltvAtRisk,
     score,
+    workflowId,
+    workflowParams,
   };
 };
 

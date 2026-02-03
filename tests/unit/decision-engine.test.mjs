@@ -60,14 +60,17 @@ const engine = buildDecisionEngine({
 assert.ok(engine.focus);
 assert.equal(engine.focus.objectType, "client_account");
 assert.equal(engine.focus.action, "Recover activation");
+assert.equal(engine.focus.workflowId, "recover_activation");
 assert.ok(engine.nextSteps.length);
 
 const leadStep = engine.queues.leads[0];
 assert.equal(leadStep.objectType, "lead");
 assert.equal(leadStep.action, "Define the next step");
+assert.equal(leadStep.workflowId, "follow_up_lead");
 
 const dealStep = engine.queues.deals[0];
 assert.equal(dealStep.objectType, "deal");
 assert.equal(dealStep.action, "Prepare close plan");
+assert.equal(dealStep.workflowId, "advance_deal");
 
 console.log("decision engine unit tests passed");

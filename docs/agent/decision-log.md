@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Map decision-engine recommendations to workflow actions
+- Decision: Mapped lead/deal/customer recommendations to explicit action types and exposed “Run workflow” buttons in the UI.
+- Alternatives considered: Keep recommendations read-only; hard-code actions without config entries.
+- Rationale: Makes the decision engine immediately actionable without adding new dependencies.
+- Implications: Action types must stay synchronized between config and fallback data.
+- Follow-ups: Add workflow presets and refine action parameters.
+
 ## 2026-02-03 — Add a decision engine for priority focus + next steps
 - Decision: Implemented a lightweight decision engine that ranks lead, deal, and customer actions by value and urgency.
 - Alternatives considered: Hard-code focus in the UI or wait for the full automation layer.

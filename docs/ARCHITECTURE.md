@@ -52,7 +52,7 @@ Decision recommendations are computed in `src/lib/decision-engine.js` to rank:
 - Deal close plans (amount × probability, close-date urgency)
 - Customer activation focus (ltv_at_risk, activation status, renewal risk, data gaps)
 
-These recommendations surface as the “Priority focus” panel on Home and the focus queue in Next Steps.
+These recommendations surface as the “Priority focus” panel on Home and the focus queue in Next Steps, with buttons mapped to action types (follow_up_lead, advance_deal, and account playbooks).
 
 The revenue efficiency layer combines:
 - `estimated_ltv`

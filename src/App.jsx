@@ -1763,6 +1763,13 @@ const App = () => {
     return Object.fromEntries(state.config.kinetic_layer.action_types.map((action) => [action.id, action]));
   }, [state]);
 
+  const handleWorkflowAction = (step) => {
+    if (!step?.workflowId) return;
+    const action = actionMap[step.workflowId];
+    if (!action) return;
+    setActionSheet({ action, context: step.workflowParams || {} });
+  };
+
   const actionOptions = useMemo(() => {
     if (!state) return [];
     const relevant = {
@@ -1771,6 +1778,9 @@ const App = () => {
       change_request: ["initiate_change_request"],
       consulting_engagement: ["schedule_steering_committee", "publish_exec_readout", "run_value_realization_workshop"],
       outcome: ["request_kpi_update", "run_value_realization_workshop"],
+      lead: ["follow_up_lead"],
+      deal: ["advance_deal"],
+      client_account: ["recover_activation", "drive_activation_milestones", "run_retention_plan", "resolve_account_data_gaps"],
     };
     const actions = relevant[selectedObjectType] || [];
     return actions
@@ -3096,15 +3106,42 @@ const App = () => {
                 ) : (
                   <p className="help-text">No priority focus yet. Add leads, deals, or customers to get started.</p>
                 )}
+                {focusItem?.workflowId && actionMap[focusItem.workflowId] ? (
+                  <div className="button-row">
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleWorkflowAction(focusItem)}
+                    >
+                      Run workflow
+                    </Button>
+                    <span className="help-text">
+                      {toTitle(focusItem.workflowId)}
+                    </span>
+                  </div>
+                ) : null}
                 {nextSteps.length ? (
                   <DataTable
-                    columns={["Item", "Type", "Value at stake", "Next step"]}
+                    columns={["Item", "Type", "Value at stake", "Next step", "Workflow"]}
                     rows={nextSteps.map((step) => ({
                       key: `${step.objectType}-${step.objectId}`,
                       Item: step.title,
                       Type: step.category,
                       "Value at stake": formatCurrency(step.valueAtStake),
                       "Next step": step.action,
+                      Workflow: step.workflowId && actionMap[step.workflowId] ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleWorkflowAction(step);
+                          }}
+                        >
+                          Run
+                        </Button>
+                      ) : (
+                        "—"
+                      ),
                       onClick: () =>
                         handleSelectObject({
                           page:
@@ -4755,13 +4792,27 @@ const App = () => {
                 </div>
                 {nextSteps.length ? (
                   <DataTable
-                    columns={["Item", "Type", "Value at stake", "Suggested action"]}
+                    columns={["Item", "Type", "Value at stake", "Suggested action", "Workflow"]}
                     rows={nextSteps.map((step) => ({
                       key: `focus-${step.objectType}-${step.objectId}`,
                       Item: step.title,
                       Type: step.category,
                       "Value at stake": formatCurrency(step.valueAtStake),
                       "Suggested action": step.action,
+                      Workflow: step.workflowId && actionMap[step.workflowId] ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleWorkflowAction(step);
+                          }}
+                        >
+                          Run
+                        </Button>
+                      ) : (
+                        "—"
+                      ),
                       onClick: () =>
                         handleSelectObject({
                           page:

@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Tuned the decision-engine scoring and mapped recommendations to workflow actions.
+- Why: The “brain” now produces actionable workflows with buttons in Home and Next Steps.
+- Key changes (files/areas): `src/lib/decision-engine.js`, `src/App.jsx`, `public/docs/ontology-map.json`, `docs/ontology-map.json`, `src/data/initial-data.js`, `tests/unit/decision-engine.test.mjs`, `docs/USER_GUIDE.md`, `docs/ARCHITECTURE.md`, `docs/agent/backlog.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Review action-type naming and consider adding workflow presets per persona.
+
+## 2026-02-03
 - Outcome: Implemented the decision engine to rank next steps and surface a priority focus for owners.
 - Why: The internal launch needs a “brain” that highlights the most valuable action across leads, deals, and customers.
 - Key changes (files/areas): `src/lib/decision-engine.js`, `src/App.jsx`, `tests/unit/decision-engine.test.mjs`, `docs/USER_GUIDE.md`, `docs/ARCHITECTURE.md`.

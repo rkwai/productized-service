@@ -726,6 +726,43 @@ export const initialData = {
           "log_kpi_update_request",
         ],
       },
+      {
+        id: "follow_up_lead",
+        description: "Capture lead outreach, next step, and timing.",
+        parameters: ["lead_id", "outreach_channel", "next_step_summary", "target_date"],
+        side_effects: ["log_lead_touch", "create_followup_task", "update_lead_stage"],
+      },
+      {
+        id: "advance_deal",
+        description: "Confirm the deal close plan and advance pipeline stage.",
+        parameters: ["deal_id", "close_plan_summary", "expected_close_date", "owner_team_member_id"],
+        side_effects: ["update_deal_stage", "create_followup_task", "notify_owner"],
+      },
+      {
+        id: "recover_activation",
+        description: "Launch an activation recovery plan for at-risk customers.",
+        parameters: ["account_id", "recovery_plan_summary", "target_date", "owner_team_member_id"],
+        side_effects: ["create_recovery_plan", "notify_owner", "log_recovery_action"],
+      },
+      {
+        id: "drive_activation_milestones",
+        description: "Define activation milestones and owners for a customer.",
+        parameters: ["account_id", "milestone_summary", "target_date", "owner_team_member_id"],
+        side_effects: ["create_milestone", "notify_owner", "log_activation_plan"],
+      },
+      {
+        id: "run_retention_plan",
+        description: "Kick off a retention plan for customers with elevated risk.",
+        parameters: ["account_id", "risk_summary", "target_date", "owner_team_member_id"],
+        side_effects: ["create_retention_plan", "notify_exec_sponsor", "log_retention_action"],
+      },
+      {
+        id: "resolve_account_data_gaps",
+        description:
+          "Identify and resolve missing data fields required for ROI and activation insights.",
+        parameters: ["account_id", "fields_needed", "target_date"],
+        side_effects: ["request_data_update", "log_data_gap_action"],
+      },
     ],
   },
   data_integration_mapping: {
