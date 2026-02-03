@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-03 — Add customer activation/retention quick actions in portfolio
+- Decision: Added a Quick actions column on the Customers table to launch activation, retention, and data-gap workflows.
+- Alternatives considered: Keep actions only in the detail panel; add a separate “activation queue” page.
+- Rationale: Make activation and retention moves immediately accessible where owners scan accounts.
+- Implications: Portfolio table is denser; we may need column presets for action-heavy views.
+- Follow-ups: Add activation kickoff creation for new customers.
+
 ## 2026-02-03 — Add deal → customer conversion action in pipeline
 - Decision: Added a Convert/View customer quick action on the Deals page that auto-generates a linked customer record and closes the deal.
 - Alternatives considered: Require conversion from Settings; add a separate onboarding wizard first.

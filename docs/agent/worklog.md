@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-03
+- Outcome: Added customer quick actions for activation recovery, activation drive, retention plans, and data gap cleanup in the Customers table.
+- Why: Activation and retention moves should be one click from the portfolio view, not hidden in action tabs.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Add activation kickoff creation (engagement + milestones) when converting a deal.
+
+## 2026-02-03
 - Outcome: Added a deal → customer conversion action with auto-populated customer fields and linked records.
 - Why: Reduce friction in onboarding by letting owners convert a won deal into an account from the pipeline view.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.

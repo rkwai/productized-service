@@ -182,6 +182,7 @@ const PORTFOLIO_COLUMNS = [
   "LTV:CAC",
   "CAC payback",
   "LTV at risk",
+  "Quick actions",
 ];
 const PORTFOLIO_VIEW_PRESETS = [
   {
@@ -206,6 +207,7 @@ const PORTFOLIO_VIEW_PRESETS = [
         "Churn risk",
         "Data freshness",
         "LTV at risk",
+        "Quick actions",
       ].includes(column)
     ),
   },
@@ -224,6 +226,7 @@ const PORTFOLIO_VIEW_PRESETS = [
         "Missing data",
         "Data freshness",
         "Health",
+        "Quick actions",
       ].includes(column)
     ),
   },
@@ -2096,6 +2099,12 @@ const App = () => {
       }));
   }, [actionMap, selectedObjectRecord, selectedObjectType, state]);
 
+  const handleAccountQuickAction = (actionId, account) => {
+    const action = actionMap[actionId];
+    if (!action) return;
+    setActionSheet({ action, context: account });
+  };
+
   const deliveryActionContext =
     selectedObjectType === "milestone"
       ? selectedObjectRecord || {}
@@ -3095,6 +3104,7 @@ const App = () => {
           "LTV:CAC": "",
           "CAC payback": "",
           "LTV at risk": "",
+          "Quick actions": "",
         };
       }
     const {
@@ -3113,6 +3123,26 @@ const App = () => {
       paybackMonths,
     } = entry.item;
     const isSelected = selectedPortfolioAccounts.includes(account.account_id);
+    const activationLabel = String(activationStatus || "").toLowerCase();
+    const lifecycleLabel = String(lifecycleStage || "").toLowerCase();
+    const primaryActionId =
+      activationLabel === "at risk"
+        ? "recover_activation"
+        : lifecycleLabel === "onboarded"
+          ? "drive_activation_milestones"
+          : null;
+    const secondaryActionId =
+      riskValue >= RENEWAL_RISK_THRESHOLD
+        ? "run_retention_plan"
+        : missingFields.length
+          ? "resolve_account_data_gaps"
+          : null;
+    const actionLabelMap = {
+      recover_activation: "Recover activation",
+      drive_activation_milestones: "Drive activation",
+      run_retention_plan: "Run retention",
+      resolve_account_data_gaps: "Fill data gaps",
+    };
     return {
       key: account.account_id,
       Select: (
@@ -3159,6 +3189,38 @@ const App = () => {
       "LTV:CAC": ltvCacRatio ? `${ltvCacRatio}x` : "—",
       "CAC payback": paybackMonths ? `${paybackMonths} mo` : "—",
       "LTV at risk": formatNumber(ltvAtRisk),
+      "Quick actions": primaryActionId || secondaryActionId ? (
+        <div className="table-actions">
+          {primaryActionId ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleAccountQuickAction(primaryActionId, account);
+              }}
+              disabled={isViewer}
+            >
+              {actionLabelMap[primaryActionId]}
+            </Button>
+          ) : null}
+          {secondaryActionId ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleAccountQuickAction(secondaryActionId, account);
+              }}
+              disabled={isViewer}
+            >
+              {actionLabelMap[secondaryActionId]}
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        "—"
+      ),
       onClick: () =>
         handleSelectObject({
           page: "portfolio",
