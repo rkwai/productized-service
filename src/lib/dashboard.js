@@ -500,7 +500,14 @@ export const persistState = (state) => {
 
 export const initializeState = async () => {
   const stored = loadState();
-  if (stored) return stored;
+  if (stored) {
+    return {
+      ...stored,
+      action_log: stored.action_log || [],
+      audit_log: stored.audit_log || [],
+      telemetry_log: stored.telemetry_log || [],
+    };
+  }
 
   let config = initialData;
   try {
@@ -519,6 +526,7 @@ export const initializeState = async () => {
     derived_values: [],
     action_log: [],
     audit_log: [],
+    telemetry_log: [],
     config_versions: [
       {
         id: "config_seed",

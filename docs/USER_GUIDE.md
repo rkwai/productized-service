@@ -34,7 +34,7 @@ Use the role selector in the header to switch roles.
 - **Operations**: Operating cadence, decisions, and accountability.
 - **Next Steps / Inbox**: Auto-ranked focus queue plus workflow runs and action logs.
 - **Data Model**: View the canonical ontology configuration.
-- **Settings**: Update config metadata, instance data, and audit history.
+- **Settings**: Update config metadata, instance data, audit history, and local telemetry.
 
 ## Editing data
 - Use inline forms to edit object records.

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildReferenceMap,
   computeDerived,
@@ -1336,6 +1336,30 @@ const App = () => {
     });
   };
 
+  const appendTelemetryEvent = (next, event) => {
+    if (!next.telemetry_log) next.telemetry_log = [];
+    next.telemetry_log.unshift({
+      id: `telemetry_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      event_type: event.event_type,
+      occurred_at: new Date().toISOString(),
+      actor_role: next.role || "",
+      page: event.page || "",
+      object_type: event.object_type || "",
+      object_id: event.object_id || "",
+      metadata: event.metadata || {},
+    });
+  };
+
+  const resolveTelemetryTarget = (params) => {
+    if (!params) return { objectType: "", objectId: "" };
+    if (params.lead_id) return { objectType: "lead", objectId: params.lead_id };
+    if (params.deal_id) return { objectType: "deal", objectId: params.deal_id };
+    if (params.account_id) return { objectType: "client_account", objectId: params.account_id };
+    if (params.milestone_id) return { objectType: "milestone", objectId: params.milestone_id };
+    if (params.risk_issue_id) return { objectType: "risk_issue", objectId: params.risk_issue_id };
+    return { objectType: "", objectId: "" };
+  };
+
   const handleRoleChange = (value) => {
     applyUpdate((next) => {
       next.role = value;
@@ -1720,11 +1744,13 @@ const App = () => {
   };
 
   const handleActionSubmit = (action, formData) => {
+    const parameters = Object.fromEntries(formData.entries());
+    const { objectType, objectId } = resolveTelemetryTarget(parameters);
     applyUpdate((next) => {
       next.action_log.unshift({
         id: `action_${Date.now()}`,
         action_type: action.id,
-        parameters: Object.fromEntries(formData.entries()),
+        parameters,
         status: "Stubbed",
         run_at: new Date().toISOString(),
         side_effects_status: action.side_effects.map((effect) => ({ effect, status: "Pending" })),
@@ -1737,6 +1763,13 @@ const App = () => {
         },
         next
       );
+      appendTelemetryEvent(next, {
+        event_type: "action_submitted",
+        page: activePage,
+        object_type: objectType,
+        object_id: objectId,
+        metadata: { action_id: action.id },
+      });
     });
   };
 
@@ -2121,6 +2154,19 @@ const App = () => {
       tone: totalImported ? "help-text success" : "help-text",
     });
     setImportWarnings(Array.from(warningSet));
+
+    applyUpdate((next) => {
+      appendTelemetryEvent(next, {
+        event_type: "import_completed",
+        page: activePage,
+        object_type: importTarget,
+        metadata: {
+          created_count: createdCount,
+          updated_count: updatedCount,
+          format: parsed.format || "",
+        },
+      });
+    });
   };
 
   const handleFilterChange = (key, value) => {
@@ -2229,12 +2275,26 @@ const App = () => {
   const statementsOfWork = state?.instances.statement_of_work || [];
   const metrics = state?.instances.kpi_metric || [];
   const snapshots = state?.instances.kpi_snapshot || [];
+  const telemetryLog = state?.telemetry_log || [];
 
   const activePage = useMemo(() => resolveActivePage({ route }), [route]);
+  const lastTelemetryPage = useRef(null);
   const referenceMap = useMemo(
     () => (state ? buildReferenceMap(state.config, state.instances) : {}),
     [state]
   );
+
+  useEffect(() => {
+    if (!state || !activePage) return;
+    if (lastTelemetryPage.current === activePage) return;
+    lastTelemetryPage.current = activePage;
+    applyUpdate((next) => {
+      appendTelemetryEvent(next, {
+        event_type: "page_view",
+        page: activePage,
+      });
+    });
+  }, [activePage, state]);
 
   const selectedObjectType = route.objectType;
   const selectedObjectId = route.objectId;
@@ -2358,6 +2418,13 @@ const App = () => {
         { action: "log_marketing_focus", object_type: "segment", object_id: segment.segment },
         next
       );
+      appendTelemetryEvent(next, {
+        event_type: "marketing_focus_logged",
+        page: activePage,
+        object_type: "segment",
+        object_id: segment.segment,
+        metadata: { spend_action: segment.spendAction },
+      });
     });
   };
 
@@ -3275,6 +3342,21 @@ const App = () => {
       ? filteredDeals.reduce((sum, deal) => sum + (Number(deal.probability) || 0), 0) /
         filteredDeals.length
       : 0;
+
+  const telemetryRecent = telemetryLog.filter((entry) => {
+    const days = daysSince(entry.occurred_at);
+    return Number.isFinite(days) && days <= 7;
+  });
+  const telemetryByType = telemetryRecent.reduce((acc, entry) => {
+    acc[entry.event_type] = (acc[entry.event_type] || 0) + 1;
+    return acc;
+  }, {});
+  const telemetryByPage = telemetryRecent
+    .filter((entry) => entry.event_type === "page_view")
+    .reduce((acc, entry) => {
+      acc[entry.page] = (acc[entry.page] || 0) + 1;
+      return acc;
+    }, {});
 
   const getDerivedValue = (objectType, objectId, field) =>
     getDerived(state, objectType, objectId, field)?.value ?? null;
@@ -6070,6 +6152,55 @@ const App = () => {
                 </div>
               </div>
               <div className="panel">
+                <h3>Telemetry (local)</h3>
+                <p className="help-text">Last 7 days of local usage signals.</p>
+                <div className="card-grid">
+                  {Object.keys(telemetryByType).length ? (
+                    Object.entries(telemetryByType).map(([eventType, count]) => (
+                      <Card key={eventType} className="object-card">
+                        <CardHeader>
+                          <CardTitle>{toTitle(eventType)}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p>Events: {count}</p>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="muted">No telemetry recorded yet.</p>
+                  )}
+                </div>
+                {Object.keys(telemetryByPage).length ? (
+                  <div className="card-grid">
+                    {Object.entries(telemetryByPage).map(([page, count]) => (
+                      <Card key={page} className="object-card">
+                        <CardHeader>
+                          <CardTitle>{toTitle(page)}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p>Page views: {count}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : null}
+                {telemetryRecent.length ? (
+                  <div className="card-grid">
+                    {telemetryRecent.slice(0, 6).map((entry) => (
+                      <Card key={entry.id} className="object-card">
+                        <CardHeader>
+                          <CardTitle>{toTitle(entry.event_type)}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p>Page: {entry.page || "—"}</p>
+                          <p>At: {formatDate(entry.occurred_at)}</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="panel">
                 <h3>Workspace data</h3>
                 <p className="help-text">
                   Reload the demo seed data or clear everything to start with real records.
@@ -6096,6 +6227,7 @@ const App = () => {
                       links: state.links,
                       derived_values: state.derived_values,
                       action_log: state.action_log,
+                      telemetry_log: state.telemetry_log,
                     },
                     null,
                     2

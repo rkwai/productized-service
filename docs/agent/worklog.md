@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-06
+- Outcome: Added local telemetry logging, a Settings telemetry panel, and an observability spec.
+- Why: Make owner focus usage measurable without adding external dependencies.
+- Key changes (files/areas): `src/App.jsx`, `src/lib/dashboard.js`, `docs/agent/observability.md`, `docs/USER_GUIDE.md`.
+- Tests: `npm run test`.
+- Metrics / instrumentation: Local telemetry log (page views, action submissions, imports, marketing focus).
+- Follow-ups: Decide on thresholds for follow-through rate and data coverage in the UI.
+
+## 2026-02-06
 - Outcome: Added a Log outreach action to the priority focus card for lead recommendations.
 - Why: Make comm logging one click from the focus recommendation to reduce lookup time.
 - Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.

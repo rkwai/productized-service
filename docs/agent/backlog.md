@@ -20,6 +20,7 @@
 - [ ] Measure minimum data coverage needed for reliable focus signals (CAC, margin, activation fields).
 - [x] Surface lead communication history/context alongside recommendations to reduce lookup time.
 - [x] Add a Log outreach action to the priority focus card.
+- [ ] Define telemetry thresholds for recommendation follow-through and lead coverage.
 - [ ] Use the UX requirements to scope the next Owner Summary improvements.
 - [ ] Decide if focus recommendations should show a full comm log vs last contact summary.
 - [ ] Run 5 real owner interviews using the discovery scripts and log decisions.

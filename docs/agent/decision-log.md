@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-06 - Use local telemetry for observability
+- Decision: Implemented local-only telemetry logging and a Settings telemetry panel instead of external analytics.
+- Alternatives considered: Add third-party analytics; defer observability until later.
+- Rationale: Maintain local-only constraint while still enabling measurement.
+- Implications: Telemetry is local and manual; no alerts or centralized dashboards.
+- Follow-ups: Define thresholds for follow-through and data coverage.
+
 ## 2026-02-06 - Add Log outreach to priority focus
 - Decision: Added a Log outreach button for lead recommendations on the priority focus card.
 - Alternatives considered: Keep the workflow button only; place comm logging in the lead table or detail panel.
