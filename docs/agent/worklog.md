@@ -1,6 +1,22 @@
 # Worklog
 
 ## 2026-02-06
+- Outcome: Added a Log outreach action to the priority focus card for lead recommendations.
+- Why: Make comm logging one click from the focus recommendation to reduce lookup time.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: `npm run test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Decide whether to add a full comm log view.
+
+## 2026-02-06
+- Outcome: Added lead communication context to the priority focus recommendation and updated the user guide.
+- Why: Reduce lookup time and improve trust in focus recommendations.
+- Key changes (files/areas): `src/App.jsx`, `docs/USER_GUIDE.md`.
+- Tests: `npm run test`.
+- Metrics / instrumentation: None.
+- Follow-ups: Evaluate if a fuller comm log is needed beyond last contact/next step.
+
+## 2026-02-06
 - Outcome: Logged discovery summary and drafted owner focus UX requirements.
 - Why: Translate interview findings into actionable UX guidance before changes.
 - Key changes (files/areas): `docs/agent/discovery-2026-02-06.md`, `docs/UX_REQUIREMENTS.md`.

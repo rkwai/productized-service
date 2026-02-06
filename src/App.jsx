@@ -3288,6 +3288,31 @@ const App = () => {
   const focusItem = decisionEngine.focus;
   const nextSteps = decisionEngine.nextSteps;
 
+  const focusLeadContext = (() => {
+    if (!focusItem || focusItem.objectType !== "lead") return null;
+    const lead = leadMap.get(focusItem.objectId);
+    if (!lead) return null;
+    const leadActions = (state?.action_log || []).filter(
+      (entry) => entry.action_type === "follow_up_lead" && entry.parameters?.lead_id === lead.lead_id
+    );
+    const latestAction = leadActions[0];
+    const lastContact = latestAction?.run_at || lead.last_contacted_at || "";
+    const outreachChannel = latestAction?.parameters?.outreach_channel || "";
+    const commSummary = latestAction?.parameters?.next_step_summary || lead.next_step_summary || "";
+    const ownerName =
+      teamMemberMap.get(lead.owner_team_member_id)?.name || lead.owner_team_member_id || "";
+    const contactLine = [lead.contact_name, lead.contact_email].filter(Boolean).join(" | ");
+    return {
+      lastContact,
+      outreachChannel,
+      commSummary,
+      ownerName,
+      contactLine,
+    };
+  })();
+  const focusWorkflowAction = focusItem?.workflowId ? actionMap[focusItem.workflowId] : null;
+  const focusLeadAction = focusItem?.objectType === "lead" ? actionMap.follow_up_lead : null;
+
   const portfolioBulkActions = [
     {
       id: "assign_owner",
@@ -3840,7 +3865,51 @@ const App = () => {
                 ) : (
                   <p className="help-text">No priority focus yet. Add leads, deals, or customers to get started.</p>
                 )}
-                {focusItem?.workflowId && actionMap[focusItem.workflowId] ? (
+                {focusLeadContext ? (
+                  <div className="summary-grid compact">
+                    <div className="summary-tile">
+                      <span className="label">Last contact</span>
+                      <strong>{focusLeadContext.lastContact ? formatDate(focusLeadContext.lastContact) : "No comms logged"}</strong>
+                      {focusLeadContext.outreachChannel ? (
+                        <span className="helper">{toTitle(focusLeadContext.outreachChannel)}</span>
+                      ) : focusLeadContext.lastContact ? null : (
+                        <span className="helper">Log outreach to add context</span>
+                      )}
+                    </div>
+                    <div className="summary-tile">
+                      <span className="label">Last/next step</span>
+                      <strong>{focusLeadContext.commSummary || "Define next step"}</strong>
+                      {focusLeadContext.contactLine ? (
+                        <span className="helper">{focusLeadContext.contactLine}</span>
+                      ) : null}
+                    </div>
+                    <div className="summary-tile">
+                      <span className="label">Owner</span>
+                      <strong>{focusLeadContext.ownerName || "Unassigned"}</strong>
+                    </div>
+                  </div>
+                ) : null}
+                {focusLeadAction ? (
+                  <div className="button-row">
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        setActionSheet({
+                          action: focusLeadAction,
+                          context: {
+                            lead_id: focusItem?.objectId || "",
+                            next_step_summary: focusItem?.action || "",
+                            target_date: "",
+                          },
+                        })
+                      }
+                      disabled={isViewer}
+                    >
+                      Log outreach
+                    </Button>
+                    <span className="help-text">Capture outreach details and next step.</span>
+                  </div>
+                ) : focusWorkflowAction ? (
                   <div className="button-row">
                     <Button
                       variant="secondary"

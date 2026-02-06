@@ -1,5 +1,19 @@
 # Decision Log
 
+## 2026-02-06 - Add Log outreach to priority focus
+- Decision: Added a Log outreach button for lead recommendations on the priority focus card.
+- Alternatives considered: Keep the workflow button only; place comm logging in the lead table or detail panel.
+- Rationale: Comm capture needs to be immediate at the decision point.
+- Implications: Action logs will become the default comm context source.
+- Follow-ups: Evaluate if a richer comm log UI is required.
+
+## 2026-02-06 - Show lead comm context in priority focus
+- Decision: Added last-contact, next-step, and owner context next to the priority focus recommendation for leads.
+- Alternatives considered: Keep the focus card minimal and rely on table details; add a separate comms panel.
+- Rationale: Interviews showed trust depends on seeing prior comms without extra digging.
+- Implications: Action logs now influence what the focus card displays.
+- Follow-ups: Decide whether to expand beyond last contact into a full comm history view.
+
 ## 2026-02-06 - Capture discovery summary and UX requirements as source of truth
 - Decision: Created a discovery summary and UX requirements doc to guide upcoming UI changes.
 - Alternatives considered: Keep findings only in chat; wait until all interviews are complete.

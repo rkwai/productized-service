@@ -18,8 +18,10 @@
 - [ ] Establish baseline time-to-decision for the owner summary (current workflow in spreadsheets/tools).
 - [ ] Validate trust in focus recommendations with owner walkthroughs.
 - [ ] Measure minimum data coverage needed for reliable focus signals (CAC, margin, activation fields).
-- [ ] Surface lead communication history/context alongside recommendations to reduce lookup time.
+- [x] Surface lead communication history/context alongside recommendations to reduce lookup time.
+- [x] Add a Log outreach action to the priority focus card.
 - [ ] Use the UX requirements to scope the next Owner Summary improvements.
+- [ ] Decide if focus recommendations should show a full comm log vs last contact summary.
 - [ ] Run 5 real owner interviews using the discovery scripts and log decisions.
 - [ ] Decide whether to run the local-only acceptability interview (T4).
 - [x] Update unit test runner to execute all files in `tests/unit`.
