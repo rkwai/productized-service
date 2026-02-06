@@ -1,5 +1,10 @@
 # User Guide
 
+## Problem statement
+- Productized-service owners juggle lead, activation, and profitability data across tools.
+- The data is fragmented, so it is hard to decide the next focus or most profitable segment quickly.
+- Goal: Identify the next focus and most profitable segment in minutes, not hours.
+
 ## Getting started
 1. Install dependencies and start the Vite dev server.
 2. Open the browser at `http://localhost:5173`.

@@ -1,5 +1,75 @@
 # Decision Log
 
+## 2026-02-06 - Capture discovery summary and UX requirements as source of truth
+- Decision: Created a discovery summary and UX requirements doc to guide upcoming UI changes.
+- Alternatives considered: Keep findings only in chat; wait until all interviews are complete.
+- Rationale: Gives a stable reference for scope and design while more interviews run.
+- Implications: Requirements may change as more data is collected.
+- Follow-ups: Update the summary and requirements after each new interview.
+
+## 2026-02-06 - Defer local-only acceptability interview
+- Decision: Skipped Interview D (local-only acceptability) for now.
+- Alternatives considered: Run it immediately; replace with async survey.
+- Rationale: Current focus is on trust and data coverage findings; acceptability can be revisited if scope shifts.
+- Implications: Viability risk remains unvalidated.
+- Follow-ups: Reassess before external beta.
+
+## 2026-02-06 - Require comm context in focus recommendations
+- Decision: Treat prior communication context as required for recommendation trust.
+- Alternatives considered: Keep recommendations lean and rely on manual lookup; add a separate notes tab.
+- Rationale: Owner feedback indicates they will act faster when prior comms are surfaced in-line.
+- Implications: Recommendations should link to recent outreach notes or summaries.
+- Follow-ups: Define the minimal comm log fields and where they surface in the UI.
+
+## 2026-02-06 - Use simulated interview results as placeholder only
+- Decision: Generated simulated interview outputs to illustrate expected findings, with an explicit note that they are not evidence.
+- Alternatives considered: Wait for real interviews before writing any results; omit simulated readout entirely.
+- Rationale: Gives a concrete picture of what decisions will hinge on while interviews are scheduled.
+- Implications: Simulated outcomes must be replaced with real data before product decisions.
+- Follow-ups: Run real interviews and update the discovery readout.
+
+## 2026-02-06 - Run discovery experiments before more build
+- Decision: Prioritize a short discovery sprint to validate decision-time, trust, and data coverage assumptions before further feature work.
+- Alternatives considered: Continue feature build and rely on anecdotal feedback; wait until after beta to test assumptions.
+- Rationale: Reduces risk of building the wrong signals and increases confidence in the core promise.
+- Implications: Short-term focus shifts to experiments and evidence collection.
+- Follow-ups: Execute the experiment briefs and log decisions.
+
+## 2026-02-06 - Standardize problem statement across docs and UI
+- Decision: Updated docs and UI copy to state the user/problem/impact explicitly and align the primary objective string.
+- Alternatives considered: Leave copy as-is and rely on internal context; add a new standalone problem-brief doc.
+- Rationale: Consistent framing helps onboarding and reduces ambiguity about the product outcome.
+- Implications: UI copy and config metadata now embed the 15-second decision target.
+- Follow-ups: Revisit the target if launch timelines or ICP shift.
+
+## 2026-02-06 - Run unit tests only for quality enforcement
+- Decision: Ran `npm run test` (unit) as the verification step and did not run Playwright E2E.
+- Alternatives considered: Run `npm run test:all` including E2E; skip tests entirely.
+- Rationale: Unit suite gives quick signal without requiring Playwright browser setup.
+- Implications: E2E coverage was not validated.
+- Follow-ups: Run `npm run test:e2e` if full suite verification is required.
+
+## 2026-02-05 - Keep temp venv for skill validation
+- Decision: Keep using the temporary venv at `/tmp/codex-pyyaml-venv` and document its path in the skill notes.
+- Alternatives considered: Install PyYAML persistently; skip validation.
+- Rationale: Avoids system Python changes while preserving a repeatable validation path.
+- Implications: Validation depends on the temp venv existing; it may need recreation after cleanup.
+- Follow-ups: None.
+
+## 2026-02-04 - Use temp venv for PyYAML validation
+- Decision: Installed PyYAML in a temporary venv under `/tmp` to run the skill validator instead of system-wide installation.
+- Alternatives considered: Install PyYAML globally via pip with `--break-system-packages`; skip validation.
+- Rationale: Avoids modifying the system Python while still validating the skill YAML.
+- Implications: The venv is ephemeral; validation requires the temp venv path unless PyYAML is installed persistently.
+- Follow-ups: Consider a persistent PyYAML install if validation becomes frequent.
+
+## 2026-02-04 - Create global bootstrap-product-engineer skill
+- Decision: Authored a global Codex skill under `~/.codex/skills/bootstrap-product-engineer` with repo bootstrap instructions and UI metadata, without executing it.
+- Alternatives considered: Keep bootstrap steps as ad-hoc instructions; store the spec in a repo-only doc.
+- Rationale: Centralizes a reusable bootstrap workflow and avoids re-running on this repo.
+- Implications: Skill validation was not run because PyYAML is missing.
+- Follow-ups: Install PyYAML and run `quick_validate.py` when convenient.
+
 ## 2026-02-03 — Hide empty-detail tip behind tooltip
 - Decision: Replaced the empty detail card tip with a hover tooltip (“?”).
 - Alternatives considered: Keep the full tip visible; remove the tip entirely.

@@ -3,7 +3,7 @@
 ## Product in 5 lines
 - What it is: A local-first cockpit for productized-service business owners to capture leads, activate customers, and see profitability signals.
 - Who it’s for: Business owners (1–10 employees) running productized services who need clarity on lead stages, activation milestones, and segment ROI.
-- The pain it solves: Disconnected lead/customer data makes it hard to know where to focus and which segments are most profitable.
+- The pain it solves: Disconnected lead, activation, and unit-economics data makes it hard to decide the next focus or most profitable segment quickly.
 - The main workflow: Capture leads, advance lifecycle stages, onboard/activate customers with milestones, and review LTV:CAC insights by segment.
 - The #1 success metric: Owners can identify the most profitable segment and next focus in under 15 seconds.
 

@@ -3677,7 +3677,7 @@ const App = () => {
           <div className="brand">
             <span className="logo">CT</span>
             <div className="brand-text">
-              <p className="eyebrow">Productized Service Control Tower</p>
+              <p className="eyebrow">Productized Service Decision Cockpit</p>
               <h1>{state.config.client_metadata.company_name || "Owner Workspace"}</h1>
               <p className="objective">{state.config.client_metadata.primary_objective || ""}</p>
             </div>
@@ -3721,8 +3721,8 @@ const App = () => {
       <main className="layout">
         <aside className="sidebar">
           <div className="sidebar-header">
-            <h2>Owner cockpit</h2>
-            <p>Lead, customer, and growth workflows.</p>
+            <h2>Owner decision cockpit</h2>
+            <p>Clarify next focus across leads, activation, and profitability.</p>
           </div>
           <nav>
             {NAV_ITEMS.map((item) => (
@@ -3738,7 +3738,7 @@ const App = () => {
             <section className="page active" data-page="home">
               <PageHeader
                 title="Home / Owner Summary"
-                description="Lead conversion, activation progress, and profitability signals."
+                description="Clarify the next focus across leads, activation, and profitability."
                 action={
                   <div className="page-actions">
                     <div className="pill">Owner Summary</div>

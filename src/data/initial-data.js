@@ -4,7 +4,7 @@ export const initialData = {
     company_name: "{{COMPANY_NAME}}",
     fde_lead: "{{FDE_NAME}}",
     primary_objective:
-      "Convert leads, activate customers, and focus marketing on the most profitable segment (LTV:CAC).",
+      "Identify the next focus and most profitable segment in under 15 seconds across lead, activation, and profitability data.",
     deployment_timeline: "1-week internal launch",
   },
   semantic_layer: {

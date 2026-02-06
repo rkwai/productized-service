@@ -1,6 +1,12 @@
 # Productized Service Decision Cockpit UI
 
 A configuration-driven, dependency-free cockpit for productized-service business owners to capture leads, activate customers, and see profitability signals (LTV:CAC by segment).
+The goal is to make the next focus and profit signals obvious in minutes, not hours.
+
+## Problem statement
+- User: Productized-service owners managing leads, activation, and profitability across spreadsheets/tools.
+- Problem: Data is fragmented and stale, so it is hard to see the next focus or most profitable segment.
+- Impact: Follow-ups slow down and marketing spend drifts away from profit.
 
 ## Why this exists
 This prototype helps productized-service owners translate lead/customer data into an operational cockpit that:
