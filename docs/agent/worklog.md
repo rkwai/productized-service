@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-06
+- Outcome: Fixed the Playwright happy path test to click the correct Customers table row.
+- Why: The portfolio page now has multiple tables; the old selector hit the wrong panel.
+- Key changes (files/areas): `tests/happy-path.spec.js`.
+- Tests: `npm run test:e2e`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
+## 2026-02-06
 - Outcome: Added local telemetry logging, a Settings telemetry panel, and an observability spec.
 - Why: Make owner focus usage measurable without adding external dependencies.
 - Key changes (files/areas): `src/App.jsx`, `src/lib/dashboard.js`, `docs/agent/observability.md`, `docs/USER_GUIDE.md`.

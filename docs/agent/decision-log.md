@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-06 - Target Customers panel in E2E selector
+- Decision: Updated the E2E test to locate the Customers panel via its heading instead of the first table on the portfolio page.
+- Alternatives considered: Keep generic table selector; add data-testid attributes.
+- Rationale: Portfolio page includes multiple tables; heading-based selection is stable without new attributes.
+- Implications: Test is less brittle as new tables are added.
+- Follow-ups: Add data-testid attributes if selectors grow complex.
+
 ## 2026-02-06 - Use local telemetry for observability
 - Decision: Implemented local-only telemetry logging and a Settings telemetry panel instead of external analytics.
 - Alternatives considered: Add third-party analytics; defer observability until later.
