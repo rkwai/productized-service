@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-06 - Add a single lead detail expansion to happy-path
+- Decision: Added only a lead detail expansion check to the happy-path test.
+- Alternatives considered: Add multiple new flows (imports, workflow runs); add no additional flows.
+- Rationale: Keep coverage high-value without increasing brittleness.
+- Implications: Happy-path now covers customers + leads detail expansion.
+- Follow-ups: Revisit adding workflow run checks after selectors stabilize.
+
 ## 2026-02-06 - Target Customers panel in E2E selector
 - Decision: Updated the E2E test to locate the Customers panel via its heading instead of the first table on the portfolio page.
 - Alternatives considered: Keep generic table selector; add data-testid attributes.

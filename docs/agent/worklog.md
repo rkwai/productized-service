@@ -1,6 +1,14 @@
 # Worklog
 
 ## 2026-02-06
+- Outcome: Extended the Playwright happy-path test to cover lead detail expansion.
+- Why: Add one additional core workflow check without making the test brittle.
+- Key changes (files/areas): `tests/happy-path.spec.js`.
+- Tests: `npm run test:e2e`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
+## 2026-02-06
 - Outcome: Fixed the Playwright happy path test to click the correct Customers table row.
 - Why: The portfolio page now has multiple tables; the old selector hit the wrong panel.
 - Key changes (files/areas): `tests/happy-path.spec.js`.

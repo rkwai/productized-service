@@ -22,6 +22,15 @@ test("happy path navigation and admin metadata update work", async ({ page }) =>
   await firstAccountRow.locator("td").nth(1).click();
   await expect(customersPanel.locator(".object-panel")).toBeVisible();
 
+  await page.getByRole("link", { name: "Leads" }).click();
+  await expect(page.locator('[data-page="leads"]')).toBeVisible();
+  const leadsPanel = page
+    .getByRole("heading", { level: 3, name: "Lead pipeline" })
+    .locator("..");
+  const firstLeadRow = leadsPanel.locator("table tbody tr").first();
+  await firstLeadRow.locator("td").first().click();
+  await expect(leadsPanel.locator(".object-panel")).toBeVisible();
+
   await page.getByRole("link", { name: "Activation Health" }).click();
   await expect(page.locator('[data-page="engagement-health"]')).toBeVisible();
 
