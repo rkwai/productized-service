@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gherkin Test Sync"
+  short_description: "Keep Gherkin E2E tests in sync"
+  default_prompt: "Use $gherkin-test-sync to update Gherkin features and step definitions after UI changes."

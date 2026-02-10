@@ -51,6 +51,8 @@ npx playwright install
 npm run test:e2e
 ```
 
+E2E scenarios are defined in `tests/features/*.feature` and mapped to Playwright steps in `tests/bdd/steps.js`. Update the feature file first (TDD), then keep selectors and copy in sync in the step definitions.
+
 Run everything (unit + E2E):
 
 ```bash

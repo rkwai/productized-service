@@ -18,6 +18,7 @@ For any meaningful change:
 - Write a short plan: goal, scope, non-goals, acceptance criteria, risks.
 - Prefer the smallest shippable increment.
 - Update/add tests.
+- Use Gherkin feature files (`tests/features/*.feature`) as the source of truth for E2E flows; update features before implementation and keep `tests/bdd/steps.js` aligned with UI copy/selectors.
 - Add/verify instrumentation when it affects user behavior or funnels.
 - Run the repo checks (tests/lint/typecheck) before finalizing.
 

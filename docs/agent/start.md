@@ -20,7 +20,7 @@
 
 ## Tech overview
 - Stack: React 18 + Vite, Tailwind CSS, shadcn/ui components, Playwright for E2E.
-- Key directories: `src/` (UI, data, libs), `public/docs/` (ontology config), `docs/` (plans/architecture/guides), `tests/` (unit + e2e).
+- Key directories: `src/` (UI, data, libs), `public/docs/` (ontology config), `docs/` (plans/architecture/guides), `tests/` (unit + e2e, Gherkin features in `tests/features`).
 - How to run locally: `npm install` then `npm run dev` (Vite at http://localhost:5173).
 - How to run tests: `npm run test` (unit), `npm run test:e2e`, or `npm run test:all`.
 - Where config lives: `public/docs/ontology-map.json` (authoritative config), seed data in `src/data/seed-data.js`.

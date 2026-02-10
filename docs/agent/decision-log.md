@@ -1,5 +1,12 @@
 # Decision Log
 
+## 2026-02-09 — Move E2E happy path to Gherkin-first TDD
+- Decision: Rebuilt the Playwright happy-path test to execute Gherkin scenarios with a lightweight in-repo parser and step library.
+- Alternatives considered: Add a third-party Gherkin/Cucumber dependency; keep the imperative Playwright spec.
+- Rationale: Gherkin gives a stable, user-facing source of truth without adding new runtime or dev dependencies.
+- Implications: E2E scenarios now live in `tests/features/*.feature` and step definitions must stay aligned with UI selectors.
+- Follow-ups: Validate skill YAML via PyYAML once network access is available.
+
 ## 2026-02-06 - Add a single lead detail expansion to happy-path
 - Decision: Added only a lead detail expansion check to the happy-path test.
 - Alternatives considered: Add multiple new flows (imports, workflow runs); add no additional flows.

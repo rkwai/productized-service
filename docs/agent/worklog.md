@@ -1,5 +1,21 @@
 # Worklog
 
+## 2026-02-09
+- Outcome: Replaced the E2E happy-path spec with a Gherkin-driven runner, added step definitions + feature file, and documented the new TDD flow (plus a repo skill for keeping tests in sync).
+- Why: Make Gherkin scenarios the source of truth for user flows and reduce brittleness in Playwright selectors.
+- Key changes (files/areas): `tests/features/happy-path.feature`, `tests/bdd/gherkin.js`, `tests/bdd/runner.js`, `tests/bdd/steps.js`, `tests/happy-path.spec.js`, `README.md`, `AGENTS.md`, `docs/agent/start.md`, `.codex/skills/gherkin-test-sync/SKILL.md`.
+- Tests: `npm test`, `npm run test:e2e`.
+- Metrics / instrumentation: None.
+- Follow-ups: Install PyYAML when network is available to run skill validation scripts.
+
+## 2026-02-09
+- Outcome: Installed PyYAML in the temp venv and validated the `gherkin-test-sync` skill.
+- Why: Confirm the skill frontmatter is valid and unblock future skill checks.
+- Key changes (files/areas): None (validation only).
+- Tests: `/tmp/codex-pyyaml-venv/bin/python .../quick_validate.py .codex/skills/gherkin-test-sync`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
 ## 2026-02-06
 - Outcome: Extended the Playwright happy-path test to cover lead detail expansion.
 - Why: Add one additional core workflow check without making the test brittle.

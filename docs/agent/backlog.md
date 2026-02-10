@@ -42,6 +42,7 @@
 - [ ] Run the `bootstrap-product-engineer` skill on a clean repo to verify end-to-end behavior.
 - [x] Document the temp venv path for skill validation.
 - [ ] Decide whether Playwright E2E should be part of routine quality checks.
+- [x] Install PyYAML in a trusted environment to enable skill validation scripts.
 
 ## Parking lot
 - [ ] Verify the global `north-star-review` skill shows up in another repo if needed.
