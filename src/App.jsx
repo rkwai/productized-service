@@ -1077,21 +1077,35 @@ const ObjectViewPanel = ({
   const idField = objectType.properties.find((prop) => prop.endsWith("_id"));
   const missingId = !record[idField];
   const evidenceLinks = [record.evidence_link, record.notes_link].filter(Boolean);
-  const quickEditFields =
+  const quickEditConfig =
     objectType.id === "lead"
-      ? [
-          "company_name",
-          "contact_name",
-          "contact_email",
-          "source",
-          "stage",
-          "status",
-          "owner_team_member_id",
-          "next_step_summary",
-          "expected_value",
-          "last_contacted_at",
-        ]
-      : [];
+      ? {
+          fields: [
+            "company_name",
+            "contact_name",
+            "contact_email",
+            "source",
+            "stage",
+            "status",
+            "owner_team_member_id",
+            "next_step_summary",
+            "expected_value",
+            "last_contacted_at",
+          ],
+          helpText: "Update the core fields needed to keep this lead moving.",
+        }
+      : objectType.id === "client_account"
+        ? {
+            fields: [
+              "account_name",
+              "segment_tag",
+              "customer_acquisition_cost",
+              "gross_margin_pct",
+            ],
+            helpText: "Update core customer fields that drive profitability and segmentation.",
+          }
+        : { fields: [], helpText: "" };
+  const quickEditFields = quickEditConfig.fields;
   const showQuickEdit = quickEditFields.length && onUpdateRecord;
   const handleQuickEditChange = (field, value) => {
     if (!onUpdateRecord) return;
@@ -1134,9 +1148,9 @@ const ObjectViewPanel = ({
           {showQuickEdit ? (
             <div className="object-section">
               <h4>Quick edit</h4>
-              <p className="help-text">
-                Update the core fields needed to keep this lead moving.
-              </p>
+              {quickEditConfig.helpText ? (
+                <p className="help-text">{quickEditConfig.helpText}</p>
+              ) : null}
               <div className="field-grid">
                 {quickEditFields.map((field) => (
                   <RecordField

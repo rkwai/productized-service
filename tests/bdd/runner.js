@@ -15,7 +15,7 @@ export const runFeature = (test, feature, stepDefinitions) => {
   const runStep = createStepRunner(stepDefinitions);
 
   feature.scenarios.forEach((scenario) => {
-    test(scenario.name, async ({ page }) => {
+    test(`${feature.name} — ${scenario.name}`, async ({ page }) => {
       const context = { page };
       for (const step of scenario.steps) {
         await runStep(step, context);

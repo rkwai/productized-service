@@ -32,6 +32,17 @@ const getCompanyNameField = (page) =>
     .first()
     .locator("input");
 
+const getImportPanel = (page) =>
+  page.getByRole("heading", { level: 3, name: "Lead & deal imports" }).locator("..");
+
+const findFieldInput = (panel, label) => {
+  const fieldGroup = panel
+    .locator(".field-group")
+    .filter({ hasText: new RegExp(escapeRegExp(label), "i") })
+    .first();
+  return fieldGroup.locator("input, textarea");
+};
+
 export const stepDefinitions = [
   {
     pattern: /^I open the app$/,
@@ -43,6 +54,16 @@ export const stepDefinitions = [
     pattern: /^I see the global navigation$/,
     action: async ({ page }) => {
       await expect(page.getByRole("navigation")).toBeVisible();
+    },
+  },
+  {
+    pattern: /^I see the decision cockpit purpose statement$/,
+    action: async ({ page }) => {
+      await expect(
+        page
+          .getByText(/Clarify (the )?next focus across leads, activation, and profitability\./i)
+          .first()
+      ).toBeVisible();
     },
   },
   {
@@ -63,6 +84,23 @@ export const stepDefinitions = [
     },
   },
   {
+    pattern: /^I see the priority focus recommendation$/,
+    action: async ({ page }) => {
+      const homePage = page.locator(pageMap.Home.selector);
+      await expect(homePage.getByRole("heading", { name: "Priority focus" })).toBeVisible();
+      await expect(homePage.getByText("Focus now")).toBeVisible();
+      await expect(homePage.getByText("Suggested next step")).toBeVisible();
+    },
+  },
+  {
+    pattern: /^I see the "([^"]+)" KPI$/,
+    action: async ({ page }, kpiLabel) => {
+      await expect(
+        page.locator(pageMap.Home.selector).getByText(kpiLabel).first()
+      ).toBeVisible();
+    },
+  },
+  {
     pattern: /^I see the "([^"]+)" note$/,
     action: async ({ page }, noteText) => {
       await expect(page.getByText(noteText)).toBeVisible();
@@ -72,6 +110,28 @@ export const stepDefinitions = [
     pattern: /^I open the (.+) page$/,
     action: async ({ page }, pageName) => {
       await openPage(page, pageName);
+    },
+  },
+  {
+    pattern: /^I load the CSV import template for leads$/,
+    action: async ({ page }) => {
+      const importPanel = getImportPanel(page);
+      await importPanel.getByRole("button", { name: "Use CSV template" }).click();
+      await expect(importPanel.getByText("CSV template loaded.")).toBeVisible();
+    },
+  },
+  {
+    pattern: /^I import leads from the template$/,
+    action: async ({ page }) => {
+      const importPanel = getImportPanel(page);
+      await importPanel.getByRole("button", { name: "Import Leads" }).click();
+    },
+  },
+  {
+    pattern: /^I see the lead import success message$/,
+    action: async ({ page }) => {
+      const importPanel = getImportPanel(page);
+      await expect(importPanel.getByText(/Imported 1 lead/i)).toBeVisible();
     },
   },
   {
@@ -90,12 +150,44 @@ export const stepDefinitions = [
     },
   },
   {
+    pattern: /^I update the customer field "([^"]+)" to "([^"]+)"$/,
+    action: async ({ page }, fieldLabel, fieldValue) => {
+      const customersPanel = getCustomersPanel(page);
+      const input = findFieldInput(customersPanel, fieldLabel);
+      await input.fill(fieldValue);
+    },
+  },
+  {
+    pattern: /^I see the customer field "([^"]+)" value "([^"]+)"$/,
+    action: async ({ page }, fieldLabel, fieldValue) => {
+      const customersPanel = getCustomersPanel(page);
+      const input = findFieldInput(customersPanel, fieldLabel);
+      await expect(input).toHaveValue(fieldValue);
+    },
+  },
+  {
     pattern: /^I expand the first lead row$/,
     action: async ({ page }) => {
       const leadsPanel = getLeadsPanel(page);
       const firstLeadRow = leadsPanel.locator("table tbody tr").first();
       await firstLeadRow.locator("td").first().click();
       await expect(leadsPanel.locator(".object-panel")).toBeVisible();
+    },
+  },
+  {
+    pattern: /^I update the lead field "([^"]+)" to "([^"]+)"$/,
+    action: async ({ page }, fieldLabel, fieldValue) => {
+      const leadsPanel = getLeadsPanel(page);
+      const input = findFieldInput(leadsPanel, fieldLabel);
+      await input.fill(fieldValue);
+    },
+  },
+  {
+    pattern: /^I see the lead field "([^"]+)" value "([^"]+)"$/,
+    action: async ({ page }, fieldLabel, fieldValue) => {
+      const leadsPanel = getLeadsPanel(page);
+      const input = findFieldInput(leadsPanel, fieldLabel);
+      await expect(input).toHaveValue(fieldValue);
     },
   },
   {

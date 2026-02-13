@@ -7,6 +7,20 @@
 - Implications: E2E scenarios now live in `tests/features/*.feature` and step definitions must stay aligned with UI selectors.
 - Follow-ups: Validate skill YAML via PyYAML once network access is available.
 
+## 2026-02-09 — Require data capture for customer + lead records in Gherkin flow
+- Decision: Updated the Gherkin happy path to include capturing new account and lead info, and added customer quick edit support.
+- Alternatives considered: Keep data capture implied via Settings; defer account edits to future UX changes.
+- Rationale: Gherkin is the product requirement doc, so it should explicitly cover data capture in the core workflow.
+- Implications: The customer detail panel now includes a quick edit block for key fields.
+- Follow-ups: Consider adding validation for numeric fields (CAC/margin) if we expand coverage.
+
+## 2026-02-09 — Split E2E requirements into five Gherkin features
+- Decision: Broke the single happy-path feature into five focused requirement features (owner summary, customer profitability, lead pipeline, data import, settings).
+- Alternatives considered: Keep one end-to-end scenario; add a large multi-scenario feature.
+- Rationale: Smaller features map to product requirements and reduce brittleness.
+- Implications: The E2E runner loads all `tests/features/*.feature` files.
+- Follow-ups: Keep each feature to 1–2 scenarios maximum.
+
 ## 2026-02-06 - Add a single lead detail expansion to happy-path
 - Decision: Added only a lead detail expansion check to the happy-path test.
 - Alternatives considered: Add multiple new flows (imports, workflow runs); add no additional flows.

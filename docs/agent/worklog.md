@@ -16,6 +16,30 @@
 - Metrics / instrumentation: None.
 - Follow-ups: None.
 
+## 2026-02-09
+- Outcome: Reframed the Gherkin happy path to state product value (next focus + profitable segment) and fixed the purpose-statement selector.
+- Why: The Gherkin file is the product requirement doc, so it should reflect the value promise explicitly.
+- Key changes (files/areas): `tests/features/happy-path.feature`, `tests/bdd/steps.js`.
+- Tests: `npm run test:e2e`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
+## 2026-02-09
+- Outcome: Added Gherkin requirements + quick edit support to capture new customer and lead info in the core workflow.
+- Why: The product requirements should cover data capture for accounts and leads, not just navigation.
+- Key changes (files/areas): `tests/features/happy-path.feature`, `tests/bdd/steps.js`, `src/App.jsx`.
+- Tests: `npm test`, `npm run test:e2e`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
+## 2026-02-09
+- Outcome: Split E2E requirements into five Gherkin features and updated the runner to execute all feature files.
+- Why: Keep PRD-grade E2E coverage focused on critical workflows and easier to maintain.
+- Key changes (files/areas): `tests/features/*.feature`, `tests/happy-path.spec.js`, `tests/bdd/runner.js`, `tests/bdd/steps.js`.
+- Tests: `npm test`, `npm run test:e2e`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
 ## 2026-02-06
 - Outcome: Extended the Playwright happy-path test to cover lead detail expansion.
 - Why: Add one additional core workflow check without making the test brittle.
