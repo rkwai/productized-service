@@ -43,6 +43,17 @@ const findFieldInput = (panel, label) => {
   return fieldGroup.locator("input, textarea");
 };
 
+const coerceInputValue = async (input, value) => {
+  const type = await input.getAttribute("type");
+  if (type === "datetime-local" && value && !String(value).includes("T")) {
+    return `${value}T09:00`;
+  }
+  return value;
+};
+
+const getPriorityFocusPanel = (page) =>
+  page.locator(".panel").filter({ has: page.getByRole("heading", { name: "Priority focus" }) });
+
 export const stepDefinitions = [
   {
     pattern: /^I open the app$/,
@@ -76,6 +87,16 @@ export const stepDefinitions = [
     },
   },
   {
+    pattern: /^I see the owner value brief highlights$/,
+    action: async ({ page }) => {
+      const brief = page.locator(".executive-brief");
+      await expect(brief.getByRole("heading", { name: "Owner value brief" })).toBeVisible();
+      const tiles = brief.locator(".summary-tile");
+      const count = await tiles.count();
+      expect(count).toBeGreaterThanOrEqual(3);
+    },
+  },
+  {
     pattern: /^I see the home KPI "([^"]+)"$/,
     action: async ({ page }, kpiLabel) => {
       await expect(
@@ -90,6 +111,15 @@ export const stepDefinitions = [
       await expect(homePage.getByRole("heading", { name: "Priority focus" })).toBeVisible();
       await expect(homePage.getByText("Focus now")).toBeVisible();
       await expect(homePage.getByText("Suggested next step")).toBeVisible();
+    },
+  },
+  {
+    pattern: /^I see the focus value at stake$/,
+    action: async ({ page }) => {
+      const focusPanel = getPriorityFocusPanel(page);
+      await expect(
+        focusPanel.locator(".summary-tile").filter({ hasText: "Value at stake" })
+      ).toBeVisible();
     },
   },
   {
@@ -141,6 +171,23 @@ export const stepDefinitions = [
     },
   },
   {
+    pattern: /^I see profit concentration guidance$/,
+    action: async ({ page }) => {
+      const panel = page.getByRole("heading", { name: pageMap.Customers.heading }).locator("..");
+      await expect(
+        panel.getByText("Gross profit and LTV:CAC highlight where to concentrate marketing spend.")
+      ).toBeVisible();
+    },
+  },
+  {
+    pattern: /^I set focus on the most profitable segment$/,
+    action: async ({ page }) => {
+      const panel = page.getByRole("heading", { name: pageMap.Customers.heading }).locator("..");
+      const firstRow = panel.locator("table tbody tr").first();
+      await firstRow.getByRole("button", { name: "Set focus" }).click();
+    },
+  },
+  {
     pattern: /^I expand the first customer row$/,
     action: async ({ page }) => {
       const customersPanel = getCustomersPanel(page);
@@ -153,8 +200,15 @@ export const stepDefinitions = [
     pattern: /^I update the customer field "([^"]+)" to "([^"]+)"$/,
     action: async ({ page }, fieldLabel, fieldValue) => {
       const customersPanel = getCustomersPanel(page);
+      const objectPanel = customersPanel.locator(".object-panel");
+      if (!(await objectPanel.isVisible())) {
+        const firstAccountRow = customersPanel.locator("table tbody tr").first();
+        await firstAccountRow.locator("td").nth(1).click();
+        await expect(objectPanel).toBeVisible();
+      }
       const input = findFieldInput(customersPanel, fieldLabel);
-      await input.fill(fieldValue);
+      const normalizedValue = await coerceInputValue(input, fieldValue);
+      await input.fill(normalizedValue);
     },
   },
   {
@@ -179,7 +233,17 @@ export const stepDefinitions = [
     action: async ({ page }, fieldLabel, fieldValue) => {
       const leadsPanel = getLeadsPanel(page);
       const input = findFieldInput(leadsPanel, fieldLabel);
-      await input.fill(fieldValue);
+      const normalizedValue = await coerceInputValue(input, fieldValue);
+      await input.fill(normalizedValue);
+    },
+  },
+  {
+    pattern: /^I create a deal from the lead$/,
+    action: async ({ page }) => {
+      const leadsPanel = getLeadsPanel(page);
+      const firstRow = leadsPanel.locator("table tbody tr").first();
+      await firstRow.getByRole("button", { name: /Create deal|View deal/i }).click();
+      await expect(page.locator('[data-page="deals"]')).toBeVisible();
     },
   },
   {
@@ -197,6 +261,20 @@ export const stepDefinitions = [
     },
   },
   {
+    pattern: /^I see activation completion rate$/,
+    action: async ({ page }) => {
+      const pageScope = page.locator(pageMap["Activation Health"].selector);
+      await expect(pageScope.getByText("Completion Rate")).toBeVisible();
+    },
+  },
+  {
+    pattern: /^I see the next renewal date$/,
+    action: async ({ page }) => {
+      const pageScope = page.locator(pageMap["Activation Health"].selector);
+      await expect(pageScope.getByText("Next Renewal Date")).toBeVisible();
+    },
+  },
+  {
     pattern: /^I update the company name to "([^"]+)"$/,
     action: async ({ page }, companyName) => {
       const companyNameField = getCompanyNameField(page);
@@ -211,6 +289,15 @@ export const stepDefinitions = [
       await expect(jsonOutput).toHaveValue(
         new RegExp(`"company_name":\\s*"${escapedName}"`)
       );
+    },
+  },
+  {
+    pattern: /^I see the lead pipeline updated$/,
+    action: async ({ page }) => {
+      const leadsPage = page.locator(pageMap.Leads.selector);
+      await expect(
+        leadsPage.locator("table tbody tr").filter({ hasText: "Northwind Labs" })
+      ).toBeVisible();
     },
   },
 ];

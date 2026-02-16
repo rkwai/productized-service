@@ -40,6 +40,22 @@
 - Metrics / instrumentation: None.
 - Follow-ups: None.
 
+## 2026-02-09
+- Outcome: Reframed the five Gherkin feature files to read like ICP-facing product requirements and core value flows (owner summary, profitability focus, lead capture, activation health, bulk import).
+- Why: The Gherkin suite is the PRD and needs to mirror what we sell for $1k/month.
+- Key changes (files/areas): `tests/features/owner-summary.feature`, `tests/features/customer-profitability.feature`, `tests/features/lead-pipeline.feature`, `tests/features/data-import.feature`, `tests/features/activation-health.feature`.
+- Tests: Not run (requirements-only update).
+- Metrics / instrumentation: None.
+- Follow-ups: Implement step definitions and UI changes to satisfy the new requirements.
+
+## 2026-02-09
+- Outcome: Updated Gherkin step definitions to satisfy the ICP-facing requirements and reran E2E to green.
+- Why: The new PRD-grade feature steps needed concrete selectors and stable flows.
+- Key changes (files/areas): `tests/bdd/steps.js`.
+- Tests: `npm run test:e2e`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
 ## 2026-02-06
 - Outcome: Extended the Playwright happy-path test to cover lead detail expansion.
 - Why: Add one additional core workflow check without making the test brittle.

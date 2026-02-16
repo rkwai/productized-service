@@ -21,6 +21,13 @@
 - Implications: The E2E runner loads all `tests/features/*.feature` files.
 - Follow-ups: Keep each feature to 1–2 scenarios maximum.
 
+## 2026-02-09 — Rewrite Gherkin features as ICP-facing product requirements
+- Decision: Rewrote the five Gherkin features to emphasize ICP value propositions (next focus, profitability focus, lead capture momentum, activation risk, and bulk import).
+- Alternatives considered: Keep UI-anchored steps; add marketing copy to external docs instead.
+- Rationale: The Gherkin suite is the product requirements doc and should mirror what we sell.
+- Implications: New steps will need implementation in `tests/bdd/steps.js` and potentially UI copy updates.
+- Follow-ups: Validate step definitions and update UI to match requirement language.
+
 ## 2026-02-06 - Add a single lead detail expansion to happy-path
 - Decision: Added only a lead detail expansion check to the happy-path test.
 - Alternatives considered: Add multiple new flows (imports, workflow runs); add no additional flows.

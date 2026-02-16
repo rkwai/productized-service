@@ -1,12 +1,13 @@
-Feature: Customer profitability management
+Feature: Profitability by segment drives marketing focus
   As a productized-service owner
-  I want to review segment profitability and update customer economics
-  So I can focus on the most profitable customers and segments
+  I want to see profit concentration and LTV:CAC by segment
+  So I can focus spend on the most profitable customers
 
-  Scenario: Update a customer record while reviewing profitability
+  Scenario: Review segment profitability and log a focus decision
     Given I open the app
     When I open the Customers page
     Then I see the segment profitability summary
-    And I expand the first customer row
-    And I update the customer field "Account Name" to "Acme Retainer"
-    And I see the customer field "Account Name" value "Acme Retainer"
+    And I see profit concentration guidance
+    And I set focus on the most profitable segment
+    And I update the customer field "Customer Acquisition Cost" to "1200"
+    And I update the customer field "Gross Margin Pct" to "65"
