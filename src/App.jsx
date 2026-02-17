@@ -238,12 +238,24 @@ const PORTFOLIO_COLUMNS = [
   "LTV at risk",
   "Quick actions",
 ];
+const DEFAULT_PORTFOLIO_COLUMNS = [
+  "Select",
+  "Customer",
+  "Segment",
+  "Activation status",
+  "Health",
+  "Retention risk",
+  "Total value",
+  "LTV:CAC",
+  "LTV at risk",
+  "Quick actions",
+];
 const PORTFOLIO_VIEW_PRESETS = [
   {
     name: "Default",
     groupBy: "none",
     filters: { health: "all", risk: "all", missing: "all", lifecycle: "all", activation: "all" },
-    columns: PORTFOLIO_COLUMNS,
+    columns: DEFAULT_PORTFOLIO_COLUMNS,
   },
   {
     name: "High Risk Focus",

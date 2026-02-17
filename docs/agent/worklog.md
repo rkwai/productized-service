@@ -1,5 +1,21 @@
 # Worklog
 
+## 2026-02-17
+- Outcome: Reduced side margins by letting the app shell use full width.
+- Why: Side gutters felt too wide compared to the top margin.
+- Key changes (files/areas): `src/index.css`.
+- Tests: Not run (CSS change only).
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
+## 2026-02-17
+- Outcome: Expanded the leads table to use full width and trimmed the default customer table columns.
+- Why: Leads table was constrained by the two-column grid; customer table was too wide for daily scanning.
+- Key changes (files/areas): `src/index.css`, `src/App.jsx`.
+- Tests: `npm test`.
+- Metrics / instrumentation: None.
+- Follow-ups: None.
+
 ## 2026-02-09
 - Outcome: Replaced the E2E happy-path spec with a Gherkin-driven runner, added step definitions + feature file, and documented the new TDD flow (plus a repo skill for keeping tests in sync).
 - Why: Make Gherkin scenarios the source of truth for user flows and reduce brittleness in Playwright selectors.

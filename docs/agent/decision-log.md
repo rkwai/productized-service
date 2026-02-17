@@ -28,6 +28,13 @@
 - Implications: New steps will need implementation in `tests/bdd/steps.js` and potentially UI copy updates.
 - Follow-ups: Validate step definitions and update UI to match requirement language.
 
+## 2026-02-17 — Reduce default customer table columns
+- Decision: Slimmed the default Customers view to a focused column set (core health, profitability, and action fields).
+- Alternatives considered: Keep all columns by default; remove columns entirely from the product.
+- Rationale: The default table is used for daily scanning, and too many columns hurt readability.
+- Implications: Additional fields remain available via the column picker and saved views.
+- Follow-ups: Revisit if owners consistently re-enable the removed columns.
+
 ## 2026-02-06 - Add a single lead detail expansion to happy-path
 - Decision: Added only a lead detail expansion check to the happy-path test.
 - Alternatives considered: Add multiple new flows (imports, workflow runs); add no additional flows.
